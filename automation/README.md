@@ -1,37 +1,45 @@
-# Daily SEO content automation (n8n → Claude → GitHub → Vercel)
+# Daily SEO content automation (n8n → LLM → GitHub → Vercel)
 
-This folder contains an **importable n8n workflow** that publishes one original,
-SEO-optimised article to The Bournemouth Guide every day, on autopilot.
+Two importable n8n workflows that publish one original, SEO-optimised article to
+The Bournemouth Guide every day, on autopilot:
+
+- **`n8n-workflow.json`** — uses **Claude** (Anthropic, `claude-opus-4-8`)
+- **`n8n-workflow-openai.json`** — uses **OpenAI** (`gpt-4o`)
+
+Both are identical except the generation node.
 
 ```
-Schedule (daily 09:00)
-  → List existing posts (GitHub)      # so it never repeats a topic
-  → Pick next topic                    # from your content plan, first unused
-  → Generate with Claude (Opus 4.8)    # structured output = always-valid fields
-  → Build post                         # validate + assemble Markdown + hero image
-  → Commit to GitHub                   # push src/content/blog/<slug>.md
-      → Vercel auto-rebuilds and deploys the new page
+Every day 09:00 (Schedule Trigger)
+  → Config (Code)                      # your owner / repo / branch
+  → List existing posts (GitHub node)  # native node, so it never repeats a topic
+  → Pick next topic (Code)             # first unused topic from your content plan
+  → Generate with Claude/OpenAI (HTTP) # structured JSON output = always-valid fields
+  → Build post (Code)                  # validate + assemble Markdown + hero image
+  → Commit to GitHub (GitHub node)     # native node writes src/content/blog/<slug>.md
+      → Vercel auto-rebuilds & deploys the new page
 ```
 
-Every article automatically:
-- targets a keyword (title + first sentence + subheadings),
-- links internally to your hub pages (SEO internal-linking),
-- funnels to **/accommodation** and includes **one** contextual link to
-  `https://flexiestays.com` (varied anchor text). The site's rehype plugin
-  ([../astro.config.mjs](../astro.config.mjs)) auto-applies `rel="sponsored"` to
-  that link — you get the referral traffic without any link-scheme footprint.
-- emits `FAQPage` structured data for rich results / AI answers.
+### Why these node choices
 
-If Claude ever returns something malformed, the **Build post** node throws and
-**nothing is committed** — a bad file can never break your live build.
+- **GitHub steps use the native GitHub node** (v1.1), not raw HTTP. It handles auth,
+  base64 encoding and the commit for you — you just pass the file path + raw content.
+- **The generation step is an HTTP Request node on purpose.** It's the only way to force
+  a **strict JSON schema** (`response_format` / `output_config.format`), which is what
+  guarantees the frontmatter is always valid. It authenticates with n8n's **built-in
+  OpenAI / Anthropic credential** (`predefinedCredentialType`), so no manual header setup.
+- If the model ever returns something malformed, the **Build post** node throws and
+  **nothing is committed** — a bad file can never break your live build.
+
+Every article automatically: targets a keyword (title + first sentence + subheadings),
+links internally to your hub pages, funnels to **/accommodation**, includes **one**
+contextual link to `https://flexiestays.com` (the site's rehype plugin auto-applies
+`rel="sponsored"`), and emits `FAQPage` structured data.
 
 ---
 
 ## One-time setup
 
 ### 1. Put the repo on GitHub (delivery pipeline)
-
-The site is now a git repo. Create an empty GitHub repo, then:
 
 ```bash
 git remote add origin https://github.com/<YOUR_USER>/bournemouth-guide.git
@@ -40,72 +48,75 @@ git push -u origin main
 
 ### 2. Connect Vercel to the GitHub repo
 
-In the Vercel dashboard → your `bournemouth-guide` project → **Settings → Git** →
-connect it to the GitHub repo above. From then on, **every push auto-deploys**.
-(The project is already linked locally via `.vercel/`.)
+Vercel dashboard → `bournemouth-guide` project → **Settings → Git** → connect the repo.
+From then on, **every push auto-deploys**.
 
 ### 3. Import the workflow into n8n
 
-n8n → **Workflows → Import from File** → select
-[`n8n-workflow.json`](./n8n-workflow.json).
+n8n → **Workflows → Import from File** → pick `n8n-workflow-openai.json` (OpenAI) or
+`n8n-workflow.json` (Claude).
 
-### 4. Create two credentials in n8n (both are "Header Auth")
+### 4. Create the credentials in n8n
 
-| Credential (Header Auth) | Header name     | Header value              |
-| ------------------------ | --------------- | ------------------------- |
-| **Anthropic**            | `x-api-key`     | your Anthropic API key    |
-| **GitHub**               | `Authorization` | `Bearer <github_token>`   |
+**GitHub** (used by both GitHub nodes):
+1. First make the token on GitHub: profile → **Settings → Developer settings →
+   Personal access tokens → Fine-grained tokens → Generate new token**. Give it
+   **Only select repositories → your repo**, and **Repository permissions → Contents:
+   Read and write**. Copy the token.
+2. In n8n → **Credentials → Add credential** → search **"GitHub API"** → paste the token
+   in **Access Token** → Save.
 
-- Anthropic key: <https://console.anthropic.com> → API Keys.
-- GitHub token: a fine-grained PAT with **Contents: Read and write** on the repo.
+**OpenAI** (or **Anthropic** for the Claude workflow):
+- n8n → **Credentials → Add credential** → search **"OpenAI"** → paste your API key → Save.
+  (For the Claude file, search **"Anthropic"** instead.)
 
-Then open each HTTP node and select the matching credential:
-- **Generate with Claude** → Anthropic
-- **List existing posts** and **Commit to GitHub** → GitHub
+### 5. Attach the credentials to the nodes
 
-### 5. Edit the **Config** node
+- **List existing posts** and **Commit to GitHub** → select your **GitHub API** credential.
+- **Generate with OpenAI** (or **Generate with Claude**) → select your **OpenAI** (or
+  **Anthropic**) credential.
 
-Set `owner`, `repo`, `branch` to your GitHub username, repo name, and build branch.
+### 6. Edit the **Config** node
 
-### 6. Test it
+Set `owner`, `repo`, `branch` to your GitHub username, repo name, and build branch. The
+GitHub nodes read these automatically, so you only set them once, here.
 
-Click **Execute Workflow** once. It should create a new file under
-`src/content/blog/` on GitHub and trigger a Vercel deploy. Then **Activate** the
-workflow for the daily schedule.
+### 7. Test it
+
+Click **Execute Workflow** once → it should create a new `src/content/blog/*.md` on GitHub
+and trigger a Vercel deploy. Then **Activate** the workflow for the daily schedule.
 
 ---
 
 ## Managing the content plan
 
 Open the **Pick next topic** node and edit the `TOPICS` array — each row is
-`{ slug, title, keyword, category }`. Rows are published top-to-bottom, one per
-day, skipping any slug that already exists. `category` must be one of:
+`{ slug, title, keyword, category }`. Rows publish top-to-bottom, one per day, skipping any
+slug that already exists. `category` must be one of:
 
 ```
 things-to-do | food-and-drink | beaches | events | seasonal | family | wellness | walking | guides
 ```
 
-When the list runs dry the workflow simply does nothing that day (no error) —
-just add more rows. You can also swap the topic source for a Google Sheet/Airtable
-later; only the **Pick next topic** node needs to change.
+When the list runs dry, the workflow simply does nothing that day (no error) — add more rows.
 
 ---
 
-## Notes / tuning
+## Tuning
 
-- **Model**: `claude-opus-4-8` (highest quality). To cut cost per article, change
-  `model` in the **Pick next topic** node to `claude-sonnet-5`.
-- **Cadence**: change the **Every day 09:00** Schedule Trigger. Publishing in
-  small daily batches (rather than dumping everything at once) is healthier for a
-  young domain's indexing.
-- **Quality bar**: the prompt lives in the **Pick next topic** node (`SYSTEM`).
-  Tighten tone, add rules, or add few-shot examples there.
-- **Regenerate the workflow** from source if needed: the generator is
-  `scratchpad/build-workflow.mjs` (kept out of the repo).
+- **Model**: Claude workflow uses `claude-opus-4-8`; OpenAI uses `gpt-4o`. Change `model`
+  in the **Pick next topic** node (OpenAI reasoning models need `max_completion_tokens`
+  instead of `max_tokens`).
+- **Cadence**: change the **Every day 09:00** Schedule Trigger. Publishing in small daily
+  batches (vs. dumping everything at once) is healthier for a young domain's indexing.
+- **Quality/tone**: the prompt is the `SYSTEM` string in the **Pick next topic** node.
 
-## How this was verified
+## Verified
 
-The full pipeline was dry-run against a mock Claude response: the generated
-Markdown passed the Astro content schema, built cleanly, the Flexiestays link
-came out `rel="sponsored noopener"`, the page had exactly one `<h1>`, and
-`FAQPage` JSON-LD was emitted.
+Both workflows were dry-run against mock model responses: the generated Markdown passed the
+Astro content schema, built cleanly, the Flexiestays link came out `rel="sponsored noopener"`,
+each page had exactly one `<h1>`, and `FAQPage` JSON-LD was emitted.
+
+> Note: the exported JSON leaves credentials unset (you pick them per node after import) and
+> the GitHub node's owner/repo are driven by the Config node via expressions. If your n8n is
+> older than the GitHub node v1.1, re-select **Owner/Repository** in the two GitHub nodes.
