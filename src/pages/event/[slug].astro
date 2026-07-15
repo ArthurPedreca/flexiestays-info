@@ -1,0 +1,22 @@
+---
+import { getCollection, render } from 'astro:content';
+import EventLayout from '../../layouts/EventLayout.astro';
+import { eventUrl } from '../../lib/site';
+
+export async function getStaticPaths() {
+  const items = await getCollection('events', (e) => !e.data.draft);
+  return items.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: "What's On", url: '/whats-on' },
+  { name: entry.data.title, url: eventUrl(entry.id) },
+];
+---
+<EventLayout entry={entry} breadcrumbs={breadcrumbs}>
+  <Content />
+</EventLayout>

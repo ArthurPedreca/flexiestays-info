@@ -1,0 +1,57 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../../components/Breadcrumbs.astro';
+import Photo from '../../../components/Photo.astro';
+import { getCollection } from 'astro:content';
+import { itineraryUrl, absoluteUrl } from '../../../lib/site';
+import { graph, breadcrumbs as bcSchema } from '../../../lib/schema';
+
+const itineraries = await getCollection('itineraries', (e) => !e.data.draft);
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Inspiration', url: '/ideas-and-inspiration' },
+  { name: 'Itineraries', url: '/ideas-and-inspiration/itineraries' },
+];
+const jsonLd = graph(
+  { '@type': 'CollectionPage', name: 'Bournemouth Itineraries', url: absoluteUrl('/ideas-and-inspiration/itineraries') },
+  bcSchema(breadcrumbs),
+);
+---
+<BaseLayout
+  title="Bournemouth Itineraries  24 & 48 Hours, Family, Rainy Day Plans"
+  description="Ready-made Bournemouth itineraries: 24 hours, 48 hours, family days, rainy-day plans and sunny-day routes  what to see, where to eat and where to stay."
+  path="/ideas-and-inspiration/itineraries"
+  jsonLd={jsonLd}
+>
+  <section class="page-hero" style="background-image:url('/images/hengistbury-head-dorset-bournemouth.jpg')">
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> Itineraries</p>
+      <h1>Bournemouth, <strong>planned for you</strong></h1>
+      <p class="tagline">Day plans by trip type  pick the one that fits your visit.</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="cards">
+        {
+          itineraries.map((it) => (
+            <a class="lcard" href={itineraryUrl(it.id)}>
+              <Photo src={it.data.heroImage?.src} alt={it.data.heroImage?.alt} label={it.data.title} />
+              <div class="lcard-body">
+                <span class="kind">{it.data.persona}{it.data.duration ? ` · ${it.data.duration}` : ''}</span>
+                <h3>{it.data.title}</h3>
+                <p>{it.data.tagline}</p>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+      {itineraries.length === 0 && <p class="section-intro">Itineraries are coming soon.</p>}
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,23 @@
+---
+import { getCollection, render } from 'astro:content';
+import ItineraryLayout from '../../../layouts/ItineraryLayout.astro';
+import { itineraryUrl } from '../../../lib/site';
+
+export async function getStaticPaths() {
+  const items = await getCollection('itineraries', (e) => !e.data.draft);
+  return items.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Inspiration', url: '/ideas-and-inspiration' },
+  { name: 'Itineraries', url: '/ideas-and-inspiration/itineraries' },
+  { name: entry.data.title, url: itineraryUrl(entry.id) },
+];
+---
+<ItineraryLayout entry={entry} breadcrumbs={breadcrumbs}>
+  <Content />
+</ItineraryLayout>

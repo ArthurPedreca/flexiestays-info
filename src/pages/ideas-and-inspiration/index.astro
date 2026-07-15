@@ -1,0 +1,85 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Photo from '../../components/Photo.astro';
+import { getCollection } from 'astro:content';
+import { itineraryUrl, absoluteUrl } from '../../lib/site';
+import { graph, breadcrumbs as bcSchema } from '../../lib/schema';
+
+const itineraries = await getCollection('itineraries', (e) => !e.data.draft);
+
+const themes = [
+  { title: 'Weddings by the sea', href: '/ideas-and-inspiration/weddings', note: 'Clifftop venues and beach ceremonies.' },
+  { title: 'Short breaks', href: '/ideas-and-inspiration/short-breaks', note: 'Two- and three-night escapes.' },
+  { title: 'School holidays', href: '/ideas-and-inspiration/school-holidays', note: 'Family days out, rain or shine.' },
+];
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Inspiration', url: '/ideas-and-inspiration' },
+];
+const jsonLd = graph(
+  { '@type': 'CollectionPage', name: 'Ideas & Inspiration for Bournemouth', url: absoluteUrl('/ideas-and-inspiration') },
+  bcSchema(breadcrumbs),
+);
+---
+<BaseLayout
+  title="Ideas & Inspiration  Bournemouth Itineraries, Short Breaks & Trip Ideas"
+  description="Not sure where to start? Bournemouth itineraries for families, couples and rainy days, plus short-break ideas, weddings and seasonal inspiration."
+  path="/ideas-and-inspiration"
+  jsonLd={jsonLd}
+>
+  <section class="page-hero" style="background-image:url('/images/durdle-door-dorset-bournemouth.jpg')">
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> Ideas & Inspiration</p>
+      <h1>Not sure where <strong>to start?</strong></h1>
+      <p class="tagline">Ready-made itineraries and trip ideas to help you plan the perfect Bournemouth visit  whatever the weather and whoever you’re with.</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  {
+    itineraries.length > 0 && (
+      <section class="tight">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Itineraries</p>
+          <h2>Ready-made <em>itineraries</em></h2>
+          <p class="section-intro">Hand-built day plans by trip type  follow one end to end or cherry-pick the bits you like.</p>
+          <div class="cards">
+            {itineraries.map((it) => (
+              <a class="lcard" href={itineraryUrl(it.id)}>
+                <Photo src={it.data.heroImage?.src} alt={it.data.heroImage?.alt} label={it.data.title} />
+                <div class="lcard-body">
+                  <span class="kind">{it.data.persona}{it.data.duration ? ` · ${it.data.duration}` : ''}</span>
+                  <h3>{it.data.title}</h3>
+                  <p>{it.data.tagline}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+          <p style="margin-top:28px"><a class="btn btn-dark" href="/ideas-and-inspiration/itineraries">See all itineraries →</a></p>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="answer" style="background:var(--sand)">
+    <div class="wrap">
+      <p class="eyebrow"><span class="sun"></span> More inspiration</p>
+      <h2>Plan by <em>theme</em></h2>
+      <div class="grid" style="margin-top:40px">
+        {
+          themes.map((t) => (
+            <a class="season" href={t.href}>
+              <span class="when">Inspiration</span>
+              <h3>{t.title}</h3>
+              <p>{t.note}</p>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>

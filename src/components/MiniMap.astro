@@ -1,0 +1,28 @@
+---
+// Single-marker locator map for individual listing / event pages.
+// Requires Leaflet in <head>.
+interface Props {
+  lat: number;
+  lng: number;
+  name: string;
+  type?: 'beach' | 'attraction' | 'area' | 'food' | 'stay';
+  id?: string;
+  zoom?: number;
+}
+const { lat, lng, name, type = 'attraction', id = 'mini-map', zoom = 14 } = Astro.props;
+---
+<div class="mini-map" id={id} aria-label={`Map showing the location of ${name}`}></div>
+
+<script is:inline define:vars={{ lat, lng, name, type, id, zoom }}>
+  (function () {
+    if (typeof L === 'undefined') return;
+    const map = L.map(id, { scrollWheelZoom: false, zoomControl: true }).setView([lat, lng], zoom);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      maxZoom: 19,
+    }).addTo(map);
+    const icon = L.divIcon({ className: '', html: '<div class="pin pin-' + type + '"></div>', iconSize: [18, 18], iconAnchor: [9, 9] });
+    L.marker([lat, lng], { icon, title: name }).addTo(map);
+  })();
+</script>

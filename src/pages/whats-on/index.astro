@@ -1,0 +1,134 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Photo from '../../components/Photo.astro';
+import { getCollection } from 'astro:content';
+import { eventUrl, EVENT_CATEGORY_LABELS, absoluteUrl } from '../../lib/site';
+import { formatDateRange, isUpcoming } from '../../lib/format';
+import { graph, breadcrumbs as bcSchema } from '../../lib/schema';
+
+const now = new Date('2026-07-03');
+const events = (await getCollection('events', (e) => !e.data.draft))
+  .filter((e) => isUpcoming(e.data.startDate, e.data.endDate, now))
+  .sort((a, b) => a.data.startDate.getTime() - b.data.startDate.getTime());
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function monthKey(d: Date) {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+function monthLabel(d: Date) {
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
+}
+const monthsPresent = [...new Set(events.map((e) => monthKey(e.data.startDate)))].sort();
+const catsPresent = [...new Set(events.map((e) => e.data.category))];
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: "What's On", url: '/whats-on' },
+];
+
+const jsonLd = graph(
+  {
+    '@type': 'CollectionPage',
+    '@id': absoluteUrl('/whats-on') + '#collection',
+    name: "What's On in Bournemouth",
+    url: absoluteUrl('/whats-on'),
+    description: 'Festivals, sport, music, family days out and seasonal events in Bournemouth, Dorset.',
+  },
+  bcSchema(breadcrumbs),
+);
+---
+<BaseLayout
+  title="What's On in Bournemouth  Events, Festivals & Things to Do by Date"
+  description="Everything happening in Bournemouth: festivals, fireworks, sport, live music, family events and exhibitions  browse by month and category."
+  path="/whats-on"
+  jsonLd={jsonLd}
+>
+  <section class="page-hero" style="background-image:url('/images/bournemouth-pier-beach-aerial.jpg')">
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> What's On · Bournemouth</p>
+      <h1>Events in <strong>Bournemouth</strong></h1>
+      <p class="tagline">Bournemouth hosts 500+ events a year  festivals, fireworks, sport, live music and family days out. Browse by month or category.</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="wrap">
+      {
+        monthsPresent.length > 1 && (
+          <div class="filter-bar" role="group" aria-label="Filter events by month">
+            <button class="chip on" data-month="all">All dates</button>
+            {monthsPresent.map((m) => {
+              const [y, mo] = m.split('-');
+              return (
+                <button class="chip" data-month={m}>
+                  {MONTHS[Number(mo) - 1]} {y}
+                </button>
+              );
+            })}
+          </div>
+        )
+      }
+
+      {
+        catsPresent.length > 1 && (
+          <div class="filter-bar" role="group" aria-label="Filter events by category" style="margin-top:12px">
+            <button class="chip on" data-cat="all">All types</button>
+            {catsPresent.map((c) => (
+              <button class="chip" data-cat={c}>{EVENT_CATEGORY_LABELS[c]}</button>
+            ))}
+          </div>
+        )
+      }
+
+      <div class="cards" id="event-cards">
+        {
+          events.map((e) => (
+            <a class="lcard" href={eventUrl(e.id)} data-month={monthKey(e.data.startDate)} data-cat={e.data.category}>
+              <Photo src={e.data.heroImage?.src} alt={e.data.heroImage?.alt} label={e.data.title} />
+              <div class="lcard-body">
+                <span class="kind">{EVENT_CATEGORY_LABELS[e.data.category]} · {formatDateRange(e.data.startDate, e.data.endDate)}</span>
+                <h3>{e.data.title}</h3>
+                <p>{e.data.tagline}</p>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+
+      {events.length === 0 && <p class="section-intro">No upcoming events listed right now  check back soon.</p>}
+    </div>
+  </section>
+</BaseLayout>
+
+<script is:inline>
+  (function () {
+    const state = { month: 'all', cat: 'all' };
+    function apply() {
+      document.querySelectorAll('#event-cards > [data-month]').forEach((card) => {
+        const okM = state.month === 'all' || card.getAttribute('data-month') === state.month;
+        const okC = state.cat === 'all' || card.getAttribute('data-cat') === state.cat;
+        card.style.display = okM && okC ? '' : 'none';
+      });
+    }
+    document.querySelectorAll('.filter-bar .chip[data-month]').forEach((b) =>
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.filter-bar .chip[data-month]').forEach((x) => x.classList.remove('on'));
+        b.classList.add('on');
+        state.month = b.getAttribute('data-month');
+        apply();
+      }),
+    );
+    document.querySelectorAll('.filter-bar .chip[data-cat]').forEach((b) =>
+      b.addEventListener('click', () => {
+        document.querySelectorAll('.filter-bar .chip[data-cat]').forEach((x) => x.classList.remove('on'));
+        b.classList.add('on');
+        state.cat = b.getAttribute('data-cat');
+        apply();
+      }),
+    );
+  })();
+</script>

@@ -1,0 +1,22 @@
+---
+import { getCollection, render } from 'astro:content';
+import AreaLayout from '../../../layouts/AreaLayout.astro';
+import { areaUrl } from '../../../lib/site';
+
+export async function getStaticPaths() {
+  const items = await getCollection('areas', (e) => !e.data.draft && e.data.type === 'town');
+  return items.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Explore', url: '/explore' },
+  { name: entry.data.title, url: areaUrl('town', entry.id) },
+];
+---
+<AreaLayout entry={entry} breadcrumbs={breadcrumbs}>
+  <Content />
+</AreaLayout>

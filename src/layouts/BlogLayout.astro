@@ -1,0 +1,113 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Photo from '../components/Photo.astro';
+import Faq from '../components/Faq.astro';
+import ListingCard from '../components/ListingCard.astro';
+import { BLOG_CATEGORY_LABELS, blogUrl, SITE } from '../lib/site';
+import { formatDate } from '../lib/format';
+import { graph, blogPosting, breadcrumbs as bcSchema, faqPage } from '../lib/schema';
+import { getEntries } from 'astro:content';
+
+const { entry, breadcrumbs } = Astro.props;
+const d = entry.data;
+const url = blogUrl(entry.id);
+
+const relatedListings = (d.relatedListings?.length ? await getEntries(d.relatedListings) : []).filter(Boolean);
+const relatedPosts = (d.relatedPosts?.length ? await getEntries(d.relatedPosts) : []).filter(Boolean);
+
+const seoTitle = d.seo?.title ?? `${d.title}  The Bournemouth Guide`;
+const seoDesc = d.seo?.description ?? d.description;
+
+const jsonLd = graph(
+  blogPosting(d, url),
+  bcSchema(breadcrumbs),
+  faqPage(d.faqs),
+);
+---
+<BaseLayout
+  title={seoTitle}
+  description={seoDesc}
+  path={url}
+  ogImage={d.seo?.ogImage ?? d.heroImage?.src ?? SITE.ogImage}
+  ogType="article"
+  noindex={d.seo?.noindex}
+  jsonLd={jsonLd}
+>
+  <section class="page-hero" style={d.heroImage ? `background-image:url('${d.heroImage.src}')` : ''}>
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> {BLOG_CATEGORY_LABELS[d.category]}</p>
+      <h1>{d.title}</h1>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="article">
+      <div class="article-meta">
+        <span class="cat">{BLOG_CATEGORY_LABELS[d.category]}</span>
+        <span>{formatDate(d.pubDate)}</span>
+        {d.updatedDate && <span>Updated {formatDate(d.updatedDate)}</span>}
+        <span>{d.author}</span>
+      </div>
+
+      <article class="prose">
+        <slot />
+      </article>
+
+      {
+        d.tags?.length > 0 && (
+          <div class="tags">
+            {d.tags.map((t: string) => <a href={`/blog?tag=${encodeURIComponent(t)}`}>#{t}</a>)}
+          </div>
+        )
+      }
+
+      <p class="byline">
+        Written by {d.author}. This guide draws on local knowledge and public information about
+        Bournemouth  always check opening times and event dates with the venue before you travel.
+      </p>
+    </div>
+  </section>
+
+  {
+    relatedListings.length > 0 && (
+      <section class="related">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Mentioned in this guide</p>
+          <h2>Places in this article</h2>
+          <div class="cards">
+            {relatedListings.map((r: any) => <ListingCard id={r.id} data={r.data} />)}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <Faq faqs={d.faqs} />
+
+  {
+    relatedPosts.length > 0 && (
+      <section class="tight">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Keep reading</p>
+          <h2>More from the guide</h2>
+          <div class="cards">
+            {relatedPosts.map((p: any) => (
+              <a class="lcard" href={blogUrl(p.id)}>
+                <Photo src={p.data.heroImage?.src} alt={p.data.heroImage?.alt} label={p.data.title} />
+                <div class="lcard-body">
+                  <span class="kind">{BLOG_CATEGORY_LABELS[p.data.category]}</span>
+                  <h3>{p.data.title}</h3>
+                  <p>{p.data.description}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>

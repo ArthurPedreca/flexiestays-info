@@ -1,0 +1,81 @@
+---
+// Filterable multi-pin map (home + hub pages). Requires Leaflet to be loaded
+// in <head> (pass `leaflet` to BaseLayout on pages that use this component).
+export interface Place {
+  name: string;
+  type: 'beach' | 'attraction' | 'area' | 'food' | 'stay';
+  lat: number;
+  lng: number;
+  tag?: string;
+  url: string;
+}
+interface Props {
+  places: Place[];
+  filters?: { key: string; label: string }[];
+  center?: [number, number];
+  zoom?: number;
+  id?: string;
+}
+const {
+  places,
+  filters = [
+    { key: 'all', label: 'All' },
+    { key: 'beach', label: '🏖 Beaches' },
+    { key: 'attraction', label: '📍 Attractions' },
+    { key: 'food', label: '🍽 Food & Drink' },
+    { key: 'stay', label: '🛏 Stay' },
+    { key: 'area', label: '🏘 Areas' },
+  ],
+  center = [50.7175, -1.845],
+  zoom = 12,
+  id = 'map',
+} = Astro.props;
+---
+<div class="map-shell">
+  <div class="map-filters" role="group" aria-label="Filter map pins">
+    {
+      filters.map((f, i) => (
+        <button class={`chip${i === 0 ? ' on' : ''}`} data-filter={f.key} data-map={id}>
+          {f.label}
+        </button>
+      ))
+    }
+  </div>
+  <div id={id} role="application" aria-label="Interactive map of Bournemouth"></div>
+</div>
+
+<script is:inline define:vars={{ places, center, zoom, id }}>
+  (function () {
+    if (typeof L === 'undefined') return;
+    const LABELS = { beach: 'Beach', attraction: 'Attraction', area: 'Area', food: 'Food & Drink', stay: 'Stay' };
+    const map = L.map(id, { scrollWheelZoom: false }).setView(center, zoom);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      maxZoom: 19,
+    }).addTo(map);
+
+    const markers = places.map((p) => {
+      const icon = L.divIcon({ className: '', html: '<div class="pin pin-' + p.type + '"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+      const m = L.marker([p.lat, p.lng], { icon, title: p.name }).addTo(map);
+      m.bindPopup(
+        '<b>' + p.name + '</b><span class="ptag">' + (LABELS[p.type] || '') + '</span>' +
+          (p.tag ? p.tag : '') + '<br><a href="' + p.url + '">Read in the guide →</a>'
+      );
+      m._type = p.type;
+      return m;
+    });
+
+    document.querySelectorAll('.map-filters .chip[data-map="' + id + '"]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.map-filters .chip[data-map="' + id + '"]').forEach((b) => b.classList.remove('on'));
+        btn.classList.add('on');
+        const f = btn.dataset.filter;
+        markers.forEach((m) => {
+          if (f === 'all' || m._type === f) m.addTo(map);
+          else map.removeLayer(m);
+        });
+      });
+    });
+  })();
+</script>

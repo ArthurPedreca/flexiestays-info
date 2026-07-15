@@ -1,0 +1,15 @@
+---
+import { NAV } from '../lib/site';
+
+interface Props {
+  /** Solid dark bar for interior pages without a full-bleed hero. */
+  solid?: boolean;
+}
+const { solid = false } = Astro.props;
+---
+<header class={`nav${solid ? ' solid' : ''}`}>
+  <a class="brand" href="/">The <span>Bournemouth</span> Guide</a>
+  <nav class="menu" aria-label="Primary">
+    {NAV.map((item) => <a href={item.href}>{item.label}</a>)}
+  </nav>
+</header>

@@ -1,0 +1,22 @@
+---
+import { getEntry, getCollection, render } from 'astro:content';
+import HubLayout from '../../../layouts/HubLayout.astro';
+
+const hub = await getEntry('hubs', 'things-to-do__beaches');
+if (!hub) throw new Error('Missing hub content: src/content/hubs/things-to-do__beaches.md');
+const { Content } = await render(hub);
+
+// West-to-east ordering by longitude reads naturally for the coastline.
+const listings = (await getCollection('listings', (e) => !e.data.draft && e.data.category === 'beach'))
+  .sort((a, b) => (a.data.geo?.lng ?? 0) - (b.data.geo?.lng ?? 0))
+  .map((e) => ({ id: e.id, data: e.data }));
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Things to Do', url: '/things-to-do' },
+  { name: 'Beaches', url: '/things-to-do/beaches' },
+];
+---
+<HubLayout hub={hub} path="/things-to-do/beaches" breadcrumbs={breadcrumbs} listings={listings} showFilter={false}>
+  <Content />
+</HubLayout>

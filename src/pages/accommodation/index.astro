@@ -1,0 +1,23 @@
+---
+import { getEntry, getCollection, render } from 'astro:content';
+import HubLayout from '../../layouts/HubLayout.astro';
+
+const hub = await getEntry('hubs', 'accommodation');
+if (!hub) throw new Error('Missing hub content: src/content/hubs/accommodation.md');
+const { Content } = await render(hub);
+
+const listings = (
+  await getCollection(
+    'listings',
+    (e) => !e.data.draft && ['hotel', 'bed-and-breakfast', 'self-catering', 'holiday-park'].includes(e.data.category),
+  )
+).map((e) => ({ id: e.id, data: e.data }));
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Where to Stay', url: '/accommodation' },
+];
+---
+<HubLayout hub={hub} path="/accommodation" breadcrumbs={breadcrumbs} listings={listings}>
+  <Content />
+</HubLayout>

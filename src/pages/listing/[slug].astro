@@ -1,0 +1,30 @@
+---
+import { getCollection, render } from 'astro:content';
+import ListingLayout from '../../layouts/ListingLayout.astro';
+import { listingUrl } from '../../lib/site';
+
+export async function getStaticPaths() {
+  const items = await getCollection('listings', (e) => !e.data.draft);
+  return items.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+function parent(cat: string) {
+  if (cat === 'beach') return { name: 'Beaches', url: '/things-to-do/beaches' };
+  if (['restaurant', 'pub-bar', 'cafe'].includes(cat)) return { name: 'Food & Drink', url: '/food-and-drink' };
+  if (['hotel', 'bed-and-breakfast', 'self-catering', 'holiday-park'].includes(cat))
+    return { name: 'Where to Stay', url: '/accommodation' };
+  return { name: 'Things to Do', url: '/things-to-do' };
+}
+const p = parent(entry.data.category);
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  p,
+  { name: entry.data.title, url: listingUrl(entry.id) },
+];
+---
+<ListingLayout entry={entry} breadcrumbs={breadcrumbs}>
+  <Content />
+</ListingLayout>

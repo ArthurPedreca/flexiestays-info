@@ -1,0 +1,164 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Photo from '../components/Photo.astro';
+import Faq from '../components/Faq.astro';
+import ListingCard from '../components/ListingCard.astro';
+import MiniMap from '../components/MiniMap.astro';
+import { CATEGORY_LABELS, AREA_LABELS, listingUrl, SITE, BOOKING_URL, isAccommodation } from '../lib/site';
+import { pinType } from '../lib/site';
+import { graph, listing as listingSchema, breadcrumbs as bcSchema, faqPage } from '../lib/schema';
+import { getEntries } from 'astro:content';
+
+const { entry, breadcrumbs } = Astro.props;
+const d = entry.data;
+const url = listingUrl(entry.id);
+
+// Filter out any references that don't resolve yet (robust against the
+// automation adding a link before the target page exists).
+const related = (d.related?.length ? await getEntries(d.related) : []).filter(Boolean);
+
+const seoTitle = d.seo?.title ?? `${d.title}  The Bournemouth Guide`;
+const seoDesc = d.seo?.description ?? d.tagline;
+
+const jsonLd = graph(
+  listingSchema(d, url),
+  bcSchema(breadcrumbs),
+  faqPage(d.faqs),
+);
+
+const stay = isAccommodation(d.category);
+const hasInfo = d.address?.postcode || d.address?.street || d.contact || d.openingTimes || d.priceGuide || stay;
+---
+<BaseLayout
+  title={seoTitle}
+  description={seoDesc}
+  path={url}
+  ogImage={d.seo?.ogImage ?? d.heroImage?.src ?? SITE.ogImage}
+  ogType="article"
+  noindex={d.seo?.noindex}
+  jsonLd={jsonLd}
+  leaflet={!!d.geo}
+>
+  <section class="page-hero tall" style={d.heroImage ? `background-image:url('${d.heroImage.src}')` : ''}>
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> {d.subcategory ?? CATEGORY_LABELS[d.category]} · {AREA_LABELS[d.area]}</p>
+      <h1>{d.title}</h1>
+      <p class="tagline">{d.tagline}</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="listing-layout">
+        <div>
+          <article class="prose">
+            <slot />
+          </article>
+
+          {
+            d.highlights?.length > 0 && (
+              <div class="highlights">
+                <h3>Highlights</h3>
+                <ul>
+                  {d.highlights.map((h: string) => <li>{h}</li>)}
+                </ul>
+              </div>
+            )
+          }
+
+          {
+            d.amenities?.length > 0 && (
+              <div class="pills">
+                {d.amenities.map((a: string) => <span class="pill">{a}</span>)}
+              </div>
+            )
+          }
+
+          {
+            d.gallery?.length > 0 && (
+              <div class="gallery">
+                {d.gallery.map((g: { src: string; alt: string }) => <Photo src={g.src} alt={g.alt} />)}
+              </div>
+            )
+          }
+        </div>
+
+        <aside>
+          {
+            hasInfo && (
+              <div class="info-card">
+                <div class="info-head">Visitor information</div>
+                {(d.address?.street || d.address?.postcode) && (
+                  <div class="info-row">
+                    <span class="label">Address</span>
+                    <span class="val">
+                      {[d.address.street, d.address.locality, d.address.postcode].filter(Boolean).join(', ')}
+                    </span>
+                  </div>
+                )}
+                {d.openingTimes && (
+                  <div class="info-row">
+                    <span class="label">Opening times</span>
+                    <span class="val">{d.openingTimes}</span>
+                  </div>
+                )}
+                {d.priceGuide && (
+                  <div class="info-row">
+                    <span class="label">Guide prices</span>
+                    <span class="val">{d.priceGuide}</span>
+                  </div>
+                )}
+                {d.contact?.phone && (
+                  <div class="info-row">
+                    <span class="label">Phone</span>
+                    <span class="val"><a href={`tel:${d.contact.phone.replace(/\s/g, '')}`}>{d.contact.phone}</a></span>
+                  </div>
+                )}
+                {d.contact?.website && (
+                  <div class="info-row">
+                    <span class="label">Website</span>
+                    <span class="val"><a href={d.contact.website} rel="nofollow noopener" target="_blank">Visit website ↗</a></span>
+                  </div>
+                )}
+                {stay ? (
+                  <div class="info-cta">
+                    <a class="btn btn-gold" href={BOOKING_URL} rel="sponsored noopener" target="_blank">Book this property →</a>
+                    <p class="cta-note">Book direct with Flexiestays</p>
+                  </div>
+                ) : (
+                  d.contact?.website && (
+                    <div class="info-cta">
+                      <a class="btn btn-gold" href={d.contact.website} rel="nofollow noopener" target="_blank">Visit website ↗</a>
+                    </div>
+                  )
+                )}
+              </div>
+            )
+          }
+
+          {d.geo && <MiniMap lat={d.geo.lat} lng={d.geo.lng} name={d.title} type={pinType(d.category)} />}
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <Faq faqs={d.faqs} heading={`${d.title}  good to know`} />
+
+  {
+    related.length > 0 && (
+      <section class="related">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Nearby & related</p>
+          <h2>You might also like</h2>
+          <div class="cards">
+            {related.map((r: any) => <ListingCard id={r.id} data={r.data} />)}
+          </div>
+        </div>
+      </section>
+    )
+  }
+</BaseLayout>

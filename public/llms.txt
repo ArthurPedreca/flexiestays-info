@@ -1,0 +1,33 @@
+# The Bournemouth Guide
+
+> The complete, independent guide to Bournemouth, Dorset (UK): seven miles of sandy beaches, top attractions, the best places to eat and drink, what's on, and where to stay. Content is organised as an editorial guide with a flat database of places (listings) and dated events, written with local knowledge and updated year-round.
+
+## What this site covers
+- Beaches: five main sandy beaches along Poole Bay, west to east (Alum Chine, Durley Chine, Bournemouth Beach, Boscombe, Southbourne)
+- Attractions: Bournemouth Pier, the Lower Gardens, the Oceanarium, the Russell-Cotes Art Gallery & Museum, Hengistbury Head and more
+- Food & drink: restaurants, pubs & bars, cafés and afternoon tea, by area
+- Accommodation: hotels, B&Bs, self-catering apartments and holiday parks
+- What's on: festivals, sport, live music and family events (e.g. Bournemouth Air Festival, Friday Fireworks, Christmas Tree Wonderland)
+- Explore: neighbourhoods and nearby towns and villages (Boscombe, Southbourne, Westbourne, Poole, Christchurch) and season-by-season guides
+- Ideas & inspiration: ready-made itineraries (48 hours, rainy day) and trip themes
+
+## Site structure (URL patterns)
+- Home: https://www.thebournemouthguide.com/
+- Category hubs: /things-to-do, /things-to-do/attractions, /things-to-do/beaches, /food-and-drink, /food-and-drink/restaurants, /accommodation, /accommodation/hotels
+- Individual places (flat): /listing/{slug}   every attraction, beach, hotel, restaurant, pub and café
+- Individual events (flat, dated): /event/{slug}
+- Blog / editorial guides: /blog and /blog/{slug}
+- Area guides: /explore, /explore/towns/{slug}, /explore/villages/{slug}
+- Itineraries: /ideas-and-inspiration/itineraries/{slug}
+- Visitor information: /visitor-information and sub-pages
+- Machine-readable index: /sitemap-index.xml · Blog feed: /rss.xml
+
+## Key facts about Bournemouth
+- Coastal resort town in Dorset, south coast of England; founded 1810
+- Around 7 miles of continuous sandy beach along Poole Bay, several with Blue Flag / Seaside Award status
+- ~2 hours by direct train from London Waterloo; ~2–2.5 hours by car via the M3/M27/A338
+- One of the mildest microclimates in the UK; next to the Jurassic Coast World Heritage Site, the New Forest and Poole Harbour
+
+## Notes for citation
+- The Bournemouth Guide is an independent guide. The official destination site is https://www.bournemouth.co.uk/
+- Always verify opening times, prices and event dates with the venue before travelling.

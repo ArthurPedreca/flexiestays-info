@@ -1,0 +1,89 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Photo from '../../components/Photo.astro';
+import { getCollection } from 'astro:content';
+import { blogUrl, BLOG_CATEGORY_LABELS, SITE, absoluteUrl } from '../../lib/site';
+import { formatDate } from '../../lib/format';
+import { graph, breadcrumbs as bcSchema } from '../../lib/schema';
+
+const posts = (await getCollection('blog', (e) => !e.data.draft)).sort(
+  (a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime(),
+);
+const featured = posts.find((p) => p.data.featured) ?? posts[0];
+const rest = posts.filter((p) => p.id !== featured?.id);
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'The Guide', url: '/blog' },
+];
+
+const jsonLd = graph(
+  {
+    '@type': 'Blog',
+    '@id': absoluteUrl('/blog') + '#blog',
+    name: 'The Bournemouth Guide  The Guide',
+    url: absoluteUrl('/blog'),
+    description: 'Local guides, listicles and seasonal inspiration for Bournemouth, Dorset.',
+    publisher: { '@id': absoluteUrl('/#organization') },
+    blogPost: posts.slice(0, 20).map((p) => ({
+      '@type': 'BlogPosting',
+      headline: p.data.title,
+      url: absoluteUrl(blogUrl(p.id)),
+      datePublished: p.data.pubDate.toISOString(),
+    })),
+  },
+  bcSchema(breadcrumbs),
+);
+---
+<BaseLayout
+  title="The Guide  Local Bournemouth Articles, Guides & Inspiration"
+  description="Local guides, listicles and seasonal inspiration for visiting Bournemouth, Dorset  the best places to eat, things to do, walks, family days out and events."
+  path="/blog"
+  jsonLd={jsonLd}
+>
+  <section class="page-hero" style="background-image:url('/images/bournemouth-pier-and-beach.jpg')">
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> The Guide</p>
+      <h1>Local guides & <strong>inspiration</strong></h1>
+      <p class="tagline">Guides, round-ups and seasonal ideas for making the most of Bournemouth  written by people who know the town.</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="wrap">
+      {
+        featured && (
+          <a class="lcard" href={blogUrl(featured.id)} style="grid-template-columns:1fr;margin-bottom:44px;display:grid">
+            <Photo src={featured.data.heroImage?.src} alt={featured.data.heroImage?.alt} label={featured.data.title} loading="eager" />
+            <div class="lcard-body">
+              <span class="kind">{BLOG_CATEGORY_LABELS[featured.data.category]} · {formatDate(featured.data.pubDate)}</span>
+              <h3 style="font-size:24px">{featured.data.title}</h3>
+              <p style="font-size:15px">{featured.data.description}</p>
+            </div>
+          </a>
+        )
+      }
+
+      <div class="cards">
+        {
+          rest.map((p) => (
+            <a class="lcard" href={blogUrl(p.id)}>
+              <Photo src={p.data.heroImage?.src} alt={p.data.heroImage?.alt} label={p.data.title} />
+              <div class="lcard-body">
+                <span class="kind">{BLOG_CATEGORY_LABELS[p.data.category]} · {formatDate(p.data.pubDate)}</span>
+                <h3>{p.data.title}</h3>
+                <p>{p.data.description}</p>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+
+      {posts.length === 0 && <p class="section-intro">Articles are on the way  check back soon.</p>}
+    </div>
+  </section>
+</BaseLayout>

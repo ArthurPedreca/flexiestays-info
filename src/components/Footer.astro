@@ -1,0 +1,43 @@
+---
+import { FOOTER, BOOKING_URL } from '../lib/site';
+const year = 2026;
+---
+<!-- Global booking CTA — appears at the end of every page -->
+<section class="book-cta" aria-label="Book your stay">
+  <div class="wrap book-cta-inner">
+    <div>
+      <p class="eyebrow" style="color:var(--gold);justify-content:center;justify-content:flex-start">Planning your visit?</p>
+      <h2>Book your Bournemouth stay <em>direct</em></h2>
+      <p>Serviced apartments and aparthotels a few minutes from the beach — book direct with Flexiestays and skip the booking-site fees.</p>
+    </div>
+    <a class="btn btn-gold" href={BOOKING_URL} target="_blank" rel="sponsored noopener">Book Now →</a>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <p class="foot-brand">The <span>Bournemouth</span> Guide</p>
+        <p class="foot-note">
+          The complete guide to Bournemouth, Dorset  beaches, attractions, food, events and
+          places to stay, written with local knowledge and updated all year.
+        </p>
+      </div>
+      {
+        FOOTER.map((col) => (
+          <div>
+            <h4>{col.heading}</h4>
+            {col.links.map((l) => (
+              <a href={l.href}>{l.label}</a>
+            ))}
+          </div>
+        ))
+      }
+    </div>
+    <div class="copyright">
+      <span>© {year} The Bournemouth Guide. All rights reserved.</span>
+      <span>Bournemouth · Dorset · England</span>
+    </div>
+  </div>
+</footer>

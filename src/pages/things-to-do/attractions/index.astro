@@ -1,0 +1,22 @@
+---
+import { getEntry, getCollection, render } from 'astro:content';
+import HubLayout from '../../../layouts/HubLayout.astro';
+
+const hub = await getEntry('hubs', 'things-to-do__attractions');
+if (!hub) throw new Error('Missing hub content: src/content/hubs/things-to-do__attractions.md');
+const { Content } = await render(hub);
+
+const listings = (await getCollection('listings', (e) => !e.data.draft && e.data.category === 'attraction')).map((e) => ({
+  id: e.id,
+  data: e.data,
+}));
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Things to Do', url: '/things-to-do' },
+  { name: 'Attractions', url: '/things-to-do/attractions' },
+];
+---
+<HubLayout hub={hub} path="/things-to-do/attractions" breadcrumbs={breadcrumbs} listings={listings}>
+  <Content />
+</HubLayout>

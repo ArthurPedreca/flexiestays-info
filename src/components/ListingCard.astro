@@ -1,0 +1,35 @@
+---
+import Photo from './Photo.astro';
+import { CATEGORY_LABELS, AREA_LABELS, listingUrl } from '../lib/site';
+
+interface Props {
+  id: string;
+  data: {
+    title: string;
+    category: string;
+    subcategory?: string;
+    area: string;
+    tagline: string;
+    heroImage?: { src: string; alt: string };
+    priceGuide?: string;
+    dogFriendly?: boolean;
+    familyFriendly?: boolean;
+  };
+}
+const { id, data } = Astro.props;
+const url = listingUrl(id);
+---
+<a class="lcard" href={url}>
+  <Photo src={data.heroImage?.src} alt={data.heroImage?.alt} label={data.title} />
+  <div class="lcard-body">
+    <span class="kind">{data.subcategory ?? CATEGORY_LABELS[data.category] ?? data.category}</span>
+    <h3>{data.title}</h3>
+    <p>{data.tagline}</p>
+    <div class="meta">
+      <span>📍 {AREA_LABELS[data.area] ?? data.area}</span>
+      {data.priceGuide && <span>💷 {data.priceGuide}</span>}
+      {data.dogFriendly && <span>🐾 Dog-friendly</span>}
+      {data.familyFriendly && <span>👨‍👩‍👧 Family</span>}
+    </div>
+  </div>
+</a>

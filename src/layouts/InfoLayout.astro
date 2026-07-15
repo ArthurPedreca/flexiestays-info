@@ -1,0 +1,60 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Faq from '../components/Faq.astro';
+import { SITE } from '../lib/site';
+import { graph, breadcrumbs as bcSchema, faqPage } from '../lib/schema';
+
+interface Props {
+  entry: { id?: string; data: any };
+  path: string;
+  breadcrumbs: { name: string; url: string }[];
+}
+const { entry, path, breadcrumbs } = Astro.props;
+const d = entry.data;
+
+const seoTitle = d.seo?.title ?? `${d.title}  The Bournemouth Guide`;
+const seoDesc = d.seo?.description ?? d.tagline ?? SITE.description;
+const jsonLd = graph(bcSchema(breadcrumbs), faqPage(d.faqs ?? []));
+---
+<BaseLayout
+  title={seoTitle}
+  description={seoDesc}
+  path={path}
+  ogImage={d.seo?.ogImage ?? d.heroImage?.src ?? SITE.ogImage}
+  noindex={d.seo?.noindex}
+  jsonLd={jsonLd}
+  solidHeader={!d.heroImage}
+>
+  {
+    d.heroImage ? (
+      <section class="page-hero" style={`background-image:url('${d.heroImage.src}')`}>
+        <div class="veil" />
+        <div class="hero-inner wrap">
+          <h1>{d.title}</h1>
+          {d.tagline && <p class="tagline">{d.tagline}</p>}
+        </div>
+      </section>
+    ) : (
+      <section class="doc" style="padding-bottom:0">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> The Bournemouth Guide</p>
+          <h2 style="max-width:26ch">{d.title}</h2>
+          {d.tagline && <p class="section-intro">{d.tagline}</p>}
+        </div>
+      </section>
+    )
+  }
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="doc">
+    <div class="wrap">
+      <article class="prose" style="max-width:var(--reading)">
+        <slot />
+      </article>
+    </div>
+  </section>
+
+  <Faq faqs={d.faqs ?? []} />
+</BaseLayout>

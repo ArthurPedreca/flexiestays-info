@@ -1,0 +1,109 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import Photo from '../../components/Photo.astro';
+import { getCollection } from 'astro:content';
+import { areaUrl, absoluteUrl } from '../../lib/site';
+import { graph, breadcrumbs as bcSchema } from '../../lib/schema';
+
+const areas = await getCollection('areas', (e) => !e.data.draft);
+const towns = areas.filter((a) => a.data.type === 'town');
+const villages = areas.filter((a) => a.data.type === 'village' || a.data.type === 'neighbourhood');
+
+const seasons = [
+  { name: 'Spring', href: '/explore/spring', note: 'Bay Run, blossom & quieter beaches' },
+  { name: 'Summer', href: '/explore/summer', note: 'Peak beach season & the Air Festival' },
+  { name: 'Autumn', href: '/explore/autumn', note: 'Arts, food & coastal walks' },
+  { name: 'Winter', href: '/explore/winter', note: 'Christmas Tree Wonderland & festive markets' },
+];
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'Explore', url: '/explore' },
+];
+const jsonLd = graph(
+  { '@type': 'CollectionPage', name: 'Explore Bournemouth & Dorset', url: absoluteUrl('/explore') },
+  bcSchema(breadcrumbs),
+);
+---
+<BaseLayout
+  title="Explore Bournemouth & Dorset  Areas, Towns, Villages & Seasons"
+  description="Explore beyond the seafront: Bournemouth's neighbourhoods, nearby towns and villages like Poole, Christchurch, Boscombe and Southbourne, plus what to do season by season."
+  path="/explore"
+  jsonLd={jsonLd}
+>
+  <section class="page-hero" style="background-image:url('/images/sandbanks-poole-dorset-bournemouth.jpg')">
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> Explore · Dorset</p>
+      <h1>Explore <strong>beyond the beach</strong></h1>
+      <p class="tagline">Bournemouth’s neighbourhoods, the towns and villages around Poole Bay, and what the coast has to offer season by season.</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  {
+    towns.length > 0 && (
+      <section class="tight">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Towns</p>
+          <h2>Towns <em>around the bay</em></h2>
+          <div class="areas-grid">
+            {towns.map((a) => (
+              <a class="area" href={areaUrl('town', a.id)}>
+                <Photo src={a.data.heroImage?.src} alt={a.data.heroImage?.alt} label={a.data.title} />
+                <div class="area-body">
+                  <span class="kind">Town</span>
+                  <h3>{a.data.title}</h3>
+                  <p>{a.data.tagline}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  {
+    villages.length > 0 && (
+      <section class="tight" style="padding-top:0">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Neighbourhoods</p>
+          <h2>Villages & <em>neighbourhoods</em></h2>
+          <div class="areas-grid">
+            {villages.map((a) => (
+              <a class="area" href={areaUrl('village', a.id)}>
+                <Photo src={a.data.heroImage?.src} alt={a.data.heroImage?.alt} label={a.data.title} />
+                <div class="area-body">
+                  <span class="kind">{a.data.type}</span>
+                  <h3>{a.data.title}</h3>
+                  <p>{a.data.tagline}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <section class="answer" style="background:var(--sand)">
+    <div class="wrap">
+      <p class="eyebrow"><span class="sun"></span> Season by season</p>
+      <h2>Bournemouth <em>all year round</em></h2>
+      <div class="grid seasons-grid" style="margin-top:40px;grid-template-columns:repeat(4,1fr)">
+        {
+          seasons.map((s) => (
+            <a class="season" href={s.href}>
+              <span class="when">{s.name}</span>
+              <h3>{s.name} in Bournemouth</h3>
+              <p>{s.note}</p>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</BaseLayout>

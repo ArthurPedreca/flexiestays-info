@@ -1,0 +1,123 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import ListingCard from '../components/ListingCard.astro';
+import Faq from '../components/Faq.astro';
+import { AREA_LABELS, SITE } from '../lib/site';
+import { graph, breadcrumbs as bcSchema, faqPage } from '../lib/schema';
+
+interface HubEntry {
+  id?: string;
+  data: {
+    title: string;
+    tagline: string;
+    heroImage?: { src: string; alt: string };
+    faqs?: { question: string; answer: string }[];
+    seo?: { title?: string; description?: string; ogImage?: string; noindex?: boolean };
+  };
+}
+
+interface Props {
+  hub: HubEntry;
+  path: string;
+  breadcrumbs: { name: string; url: string }[];
+  listings: { id: string; data: any }[];
+  /** Optional themed sub-collections rendered below the main grid. */
+  collections?: { title: string; intro?: string; listings: { id: string; data: any }[] }[];
+  /** Show the area filter bar. */
+  showFilter?: boolean;
+}
+const { hub, path, breadcrumbs, listings, collections = [], showFilter = true } = Astro.props;
+const d = hub.data;
+
+// Distinct areas present → filter chips.
+const areasPresent = [...new Set(listings.map((l) => l.data.area))];
+
+const seoTitle = d.seo?.title ?? `${d.title}  The Bournemouth Guide`;
+const seoDesc = d.seo?.description ?? d.tagline;
+const jsonLd = graph(bcSchema(breadcrumbs), faqPage(d.faqs ?? []));
+---
+<BaseLayout
+  title={seoTitle}
+  description={seoDesc}
+  path={path}
+  ogImage={d.seo?.ogImage ?? d.heroImage?.src ?? SITE.ogImage}
+  noindex={d.seo?.noindex}
+  jsonLd={jsonLd}
+>
+  <section class="page-hero" style={d.heroImage ? `background-image:url('${d.heroImage.src}')` : ''}>
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> Bournemouth · Dorset</p>
+      <h1>{d.title}</h1>
+      <p class="tagline">{d.tagline}</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="wrap">
+      <article class="prose" style="max-width:70ch">
+        <slot />
+      </article>
+
+      {
+        showFilter && areasPresent.length > 1 && (
+          <div class="filter-bar" role="group" aria-label="Filter by area">
+            <button class="chip on" data-area="all">All areas</button>
+            {areasPresent.map((a) => (
+              <button class="chip" data-area={a}>{AREA_LABELS[a] ?? a}</button>
+            ))}
+          </div>
+        )
+      }
+
+      <div class="cards" id="hub-cards">
+        {
+          listings.map((l) => (
+            <div data-area={l.data.area}>
+              <ListingCard id={l.id} data={l.data} />
+            </div>
+          ))
+        }
+      </div>
+
+      {listings.length === 0 && <p class="section-intro">Listings for this section are coming soon.</p>}
+    </div>
+  </section>
+
+  {
+    collections.map((col) => (
+      <section class="tight">
+        <div class="wrap">
+          <div class="collection-head">
+            <p class="eyebrow"><span class="sun" /> Collection</p>
+            <h2>{col.title}</h2>
+            {col.intro && <p class="section-intro">{col.intro}</p>}
+          </div>
+          <div class="cards">
+            {col.listings.map((l) => (
+              <ListingCard id={l.id} data={l.data} />
+            ))}
+          </div>
+        </div>
+      </section>
+    ))
+  }
+
+  <Faq faqs={d.faqs ?? []} heading={`${d.title}  questions`} />
+</BaseLayout>
+
+<script is:inline>
+  document.querySelectorAll('.filter-bar .chip').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-bar .chip').forEach((b) => b.classList.remove('on'));
+      btn.classList.add('on');
+      const a = btn.getAttribute('data-area');
+      document.querySelectorAll('#hub-cards > [data-area]').forEach((card) => {
+        card.style.display = a === 'all' || card.getAttribute('data-area') === a ? '' : 'none';
+      });
+    });
+  });
+</script>

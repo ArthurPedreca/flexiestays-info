@@ -1,0 +1,88 @@
+---
+import { SITE, absoluteUrl } from '../lib/site';
+
+interface Props {
+  title: string;
+  description: string;
+  /** Site-relative path of the current page, e.g. "/listing/oceanarium". */
+  path: string;
+  ogImage?: string;
+  ogType?: 'website' | 'article';
+  noindex?: boolean;
+  /** Stringified JSON-LD (@graph) to inject. */
+  jsonLd?: string;
+  /** Load Leaflet assets (only pages with an interactive map need these). */
+  leaflet?: boolean;
+}
+
+const {
+  title,
+  description,
+  path,
+  ogImage = SITE.ogImage,
+  ogType = 'website',
+  noindex = false,
+  jsonLd,
+  leaflet = false,
+} = Astro.props;
+
+const canonical = absoluteUrl(path === '/' ? '/' : path.replace(/\/$/, ''));
+const ogImageAbs = absoluteUrl(ogImage);
+---
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+{
+  noindex ? (
+    <meta name="robots" content="noindex, nofollow" />
+  ) : (
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+  )
+}
+
+<!-- Open Graph -->
+<meta property="og:type" content={ogType} />
+<meta property="og:site_name" content={SITE.name} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:locale" content={SITE.locale} />
+<meta property="og:image" content={ogImageAbs} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImageAbs} />
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<link rel="alternate" type="application/rss+xml" title={`${SITE.name}  The Guide`} href="/rss.xml" />
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Poppins:wght@200;300;400;500;600;700&display=swap"
+  rel="stylesheet"
+/>
+
+{
+  leaflet && (
+    <>
+      <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossorigin=""
+      />
+      <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""
+        is:inline
+      />
+    </>
+  )
+}
+
+{jsonLd && <script type="application/ld+json" is:inline set:html={jsonLd} />}

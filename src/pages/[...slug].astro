@@ -1,0 +1,31 @@
+---
+// Catch-all for the `pages` collection: generic editorial / info / utility
+// pages. The Markdown file's path under src/content/pages mirrors its URL,
+// e.g. pages/about.md -> /about, pages/visitor-information/weather.md ->
+// /visitor-information/weather. More specific routes (hubs, listings, etc.)
+// take precedence over this spread route.
+import { getCollection, render } from 'astro:content';
+import InfoLayout from '../layouts/InfoLayout.astro';
+
+export async function getStaticPaths() {
+  const items = await getCollection('pages', (e) => !e.data.draft);
+  return items.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const path = '/' + entry.id;
+const segs = entry.id.split('/');
+const crumbs = [{ name: 'Home', url: '/' }];
+let acc = '';
+segs.forEach((s, i) => {
+  acc += '/' + s;
+  const name =
+    i === segs.length - 1 ? entry.data.title : s.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  crumbs.push({ name, url: acc });
+});
+---
+<InfoLayout entry={entry} path={path} breadcrumbs={crumbs}>
+  <Content />
+</InfoLayout>

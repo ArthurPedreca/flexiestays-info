@@ -1,0 +1,22 @@
+---
+import { getCollection, render } from 'astro:content';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import { blogUrl } from '../../lib/site';
+
+export async function getStaticPaths() {
+  const items = await getCollection('blog', (e) => !e.data.draft);
+  return items.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+
+const breadcrumbs = [
+  { name: 'Home', url: '/' },
+  { name: 'The Guide', url: '/blog' },
+  { name: entry.data.title, url: blogUrl(entry.id) },
+];
+---
+<BlogLayout entry={entry} breadcrumbs={breadcrumbs}>
+  <Content />
+</BlogLayout>

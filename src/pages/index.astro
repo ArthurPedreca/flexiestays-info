@@ -1,0 +1,371 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import InteractiveMap from '../components/InteractiveMap.astro';
+import Photo from '../components/Photo.astro';
+import Faq from '../components/Faq.astro';
+import { getCollection } from 'astro:content';
+import { listingUrl, areaUrl, eventUrl, AREA_LABELS, pinType, SITE, absoluteUrl, BOOKING_URL } from '../lib/site';
+import { formatDateRange, isUpcoming } from '../lib/format';
+import { graph, website, organization } from '../lib/schema';
+
+const notDraft = (e: any) => !e.data.draft;
+
+const beaches = (await getCollection('listings', (e) => notDraft(e) && e.data.category === 'beach')).sort(
+  (a, b) => (a.data.geo?.lng ?? 0) - (b.data.geo?.lng ?? 0),
+);
+const attractions = (await getCollection('listings', (e) => notDraft(e) && e.data.category === 'attraction')).slice(0, 6);
+const areas = await getCollection('areas', notDraft);
+
+// Build map pins from anything with coordinates.
+const poiForMap = await getCollection(
+  'listings',
+  (e) => notDraft(e) && !!e.data.geo && ['beach', 'attraction', 'activity', 'venue'].includes(e.data.category),
+);
+const places = [
+  ...poiForMap.map((e) => ({
+    name: e.data.title,
+    type: pinType(e.data.category),
+    lat: e.data.geo!.lat,
+    lng: e.data.geo!.lng,
+    tag: e.data.tagline,
+    url: listingUrl(e.id),
+  })),
+  ...areas
+    .filter((a) => a.data.geo)
+    .map((a) => ({
+      name: a.data.title,
+      type: 'area' as const,
+      lat: a.data.geo!.lat,
+      lng: a.data.geo!.lng,
+      tag: a.data.tagline,
+      url: areaUrl(a.data.type, a.id),
+    })),
+];
+
+const now = new Date('2026-07-03');
+const upcoming = (await getCollection('events', notDraft))
+  .filter((e) => isUpcoming(e.data.startDate, e.data.endDate, now))
+  .sort((a, b) => a.data.startDate.getTime() - b.data.startDate.getTime())
+  .slice(0, 3);
+
+const homeFaqs = [
+  {
+    question: 'What is Bournemouth known for?',
+    answer:
+      'Seven miles of sandy beaches, its Victorian pier and gardens, one of the mildest climates in the UK, a lively food and nightlife scene, and major events year-round. It sits on the Dorset coast, next to the Jurassic Coast World Heritage Site.',
+  },
+  {
+    question: 'How do I get to Bournemouth from London?',
+    answer:
+      'Direct trains from London Waterloo take around 2 hours. By car it is roughly 2–2.5 hours via the M3 and M27. National Express coaches run direct, and Bournemouth Airport serves European routes.',
+  },
+  {
+    question: 'Which is the best beach in Bournemouth?',
+    answer:
+      'Bournemouth Beach by the pier is the most popular and best equipped. Locals favour Alum Chine and Southbourne for quieter days, while Boscombe is the pick for surf and watersports. All the beaches sit on the same seven-mile stretch of sand.',
+  },
+  {
+    question: 'Is Bournemouth beach sandy or pebbly?',
+    answer:
+      'Sandy  the entire seven-mile stretch from Alum Chine to Southbourne, making it one of the longest continuous sandy beaches in the UK.',
+  },
+  {
+    question: 'When is the best time to visit Bournemouth?',
+    answer:
+      'June to September for the warmest weather and fullest events calendar; May and late September for milder crowds. Thanks to the town’s microclimate, the beaches and coastal walks are worth visiting all year.',
+  },
+];
+
+const jsonLd = graph(
+  website(),
+  organization(),
+  {
+    '@type': 'TouristDestination',
+    name: 'Bournemouth',
+    description:
+      'Bournemouth is a coastal resort town in Dorset, on the south coast of England, known for seven miles of sandy beaches, Victorian gardens, a lively food scene and year-round events.',
+    url: absoluteUrl('/'),
+    address: { '@type': 'PostalAddress', addressLocality: 'Bournemouth', addressRegion: 'Dorset', addressCountry: 'GB' },
+    geo: { '@type': 'GeoCoordinates', latitude: SITE.geo.lat, longitude: SITE.geo.lng },
+    touristType: ['Families', 'Couples', 'Beach lovers', 'Food lovers', 'Watersports enthusiasts'],
+  },
+  {
+    '@type': 'FAQPage',
+    mainEntity: homeFaqs.map((f) => ({
+      '@type': 'Question',
+      name: f.question,
+      acceptedAnswer: { '@type': 'Answer', text: f.answer },
+    })),
+  },
+);
+
+const cards = [
+  { cls: 'card--beaches', h: 'Beaches', p: 'Seven miles of sand across five beaches, west to east.', href: '/things-to-do/beaches', img: '/images/wiki/alum-chine.jpg' },
+  { cls: 'card--do', h: 'Things to Do', p: 'Attractions, activities, gardens and days out.', href: '/things-to-do', img: '/images/wiki/bournemouth-pier.jpg' },
+  { cls: 'card--food', h: 'Food & Drink', p: 'Seafront dining, independents and afternoon tea.', href: '/food-and-drink', img: '/images/wiki/durley-chine.jpg' },
+  { cls: 'card--events', h: "What's On", p: 'Festivals, sport and live events all year.', href: '/whats-on', img: '/images/wiki/air-festival.jpg' },
+  { cls: 'card--stay', h: 'Where to Stay', p: 'Seafront hotels, B&Bs, apartments and holiday parks.', href: '/accommodation', img: '/images/seabreeze-apartments-hotel-bournemouth.jpg' },
+  { cls: 'card--explore', h: 'Explore', p: 'Boscombe, Westbourne, Southbourne, Poole & beyond.', href: '/explore', img: '/images/wiki/christchurch-priory.jpg' },
+];
+---
+<BaseLayout
+  title="The Bournemouth Guide  Beaches, Attractions, Map, Food & Events in Bournemouth, Dorset"
+  description={SITE.description}
+  path="/"
+  jsonLd={jsonLd}
+  leaflet={places.length > 0}
+>
+  <!-- HERO -->
+  <section class="hero" style="background-image:url('/images/bournemouth-town-seafront-aerial.jpg')" aria-label="Aerial view of Bournemouth seafront">
+    <div class="veil" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <p class="eyebrow" style="color:#fff"><span class="sun"></span> Bournemouth · Dorset · England</p>
+      <h1 style="color:#fff" >Seven miles of sand. <strong>One complete guide.</strong></h1>
+      <p class="lede">Beaches, attractions, restaurants, events and places to stay in Bournemouth  written with local knowledge and updated all year.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-gold" href="#map-section">Open the map</a>
+        <a class="btn btn-ghost" href="/things-to-do">Explore Bournemouth</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FACT STRIP + LIVE WEATHER -->
+  <section class="facts" aria-label="Bournemouth at a glance" style="padding:0">
+    <div class="wrap">
+      <div class="fact live"><b><span class="live-dot" aria-hidden="true"></span><span id="wx-temp">–°C</span></b><span id="wx-desc">Live weather in Bournemouth</span></div>
+      <div class="fact"><b>7 miles</b><span>of continuous sandy beach along Poole Bay</span></div>
+      <div class="fact"><b>~2 hrs</b><span>by direct train from London Waterloo</span></div>
+      <div class="fact"><b>1810</b><span>the year Bournemouth was founded</span></div>
+      <div class="fact"><b id="wx-sea">–°C</b><span>current sea temperature</span></div>
+    </div>
+  </section>
+
+  <!-- QUICK ANSWER -->
+  <section class="answer" id="about">
+    <div class="wrap">
+      <article>
+        <p class="eyebrow"><span class="sun"></span> About Bournemouth</p>
+        <h2>What is Bournemouth?</h2>
+        <p>Bournemouth is a coastal resort town in Dorset, on the south coast of England, best known for seven miles of sandy beach, its Victorian pier and gardens, and one of the mildest climates in the country.</p>
+        <p>Founded in 1810 as a health retreat, the town grew into one of the UK’s most visited seaside destinations. Today it pairs a classic beach holiday  pier, promenade, beach huts, gently shelving sand  with a modern food scene, a full events calendar and easy access to the Jurassic Coast, the New Forest and Poole Harbour.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- INTERACTIVE MAP -->
+  {
+    places.length > 0 && (
+      <section class="map-section" id="map-section" style="padding-top:96px;padding-bottom:96px">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Interactive Map</p>
+          <h2>Bournemouth <em>on the map</em></h2>
+          <p class="section-intro">Every beach, attraction and neighbourhood in this guide, plotted along the bay. Filter by type and tap a pin for details.</p>
+          <InteractiveMap places={places} />
+        </div>
+      </section>
+    )
+  }
+
+  <!-- THINGS TO DO CARDS -->
+  <section id="things-to-do" style="padding-top:0">
+    <div class="wrap">
+      <p class="eyebrow"><span class="sun"></span> Start Here</p>
+      <h2>Things to do <em>in Bournemouth</em></h2>
+      <p class="section-intro">Six ways into the guide  pick a thread and follow it.</p>
+      <div class="grid">
+        {
+          cards.map((c) => (
+            <a class={`card ${c.cls}`} href={c.href}>
+              <img src={c.img} alt="" loading="lazy" decoding="async" />
+              <div class="card-body">
+                <h3>{c.h}</h3>
+                <p>{c.p}</p>
+                <span class="go">Explore →</span>
+              </div>
+            </a>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- TOP ATTRACTIONS -->
+  {
+    attractions.length > 0 && (
+      <section id="attractions" style="padding-top:0">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Don't Miss</p>
+          <h2>Top attractions <em>in Bournemouth</em></h2>
+          <div class="att-grid">
+            {attractions.map((a, i) => (
+              <a class="att" href={listingUrl(a.id)}>
+                <Photo src={a.data.heroImage?.src} alt={a.data.heroImage?.alt} label={a.data.title} />
+                <h3><span class="n">{String(i + 1).padStart(2, '0')}</span> {a.data.title}</h3>
+                <span class="kind">{a.data.subcategory ?? 'Attraction'}</span>
+                <p>{a.data.tagline}</p>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- BEACHES -->
+  {
+    beaches.length > 0 && (
+      <section class="beaches" id="beaches">
+        <div class="wrap">
+          <p class="eyebrow" style="color:#5FC4BC"><span class="sun" /> The Coast</p>
+          <h2>Bournemouth’s beaches, <em>west to east</em></h2>
+          <p class="section-intro">One continuous stretch of sand, each beach with its own character. Tap through for facilities, access and the full guide.</p>
+
+          <div class="picker" id="picker">
+            <p class="q">What are you looking for today?</p>
+            <div class="opts">
+              <button class="chip" data-pick="quiet">Somewhere quiet</button>
+              <button class="chip" data-pick="family">Family day out</button>
+              <button class="chip" data-pick="facilities">Best facilities</button>
+              <button class="chip" data-pick="surf">Surf & watersports</button>
+              <button class="chip" data-pick="dogs">Dog-friendly</button>
+            </div>
+            <p class="result" id="pick-result" aria-live="polite"></p>
+          </div>
+
+          <div class="beach-list">
+            {beaches.map((b, i) => (
+              <article class="beach">
+                <Photo src={b.data.heroImage?.src} alt={b.data.heroImage?.alt} label={b.data.title} class="photo" />
+                <div>
+                  <h3><span class="num">{String(i + 1).padStart(2, '0')}</span> {b.data.title}</h3>
+                  <span class="tag">{AREA_LABELS[b.data.area]}</span>
+                </div>
+                <p>{b.data.tagline}</p>
+                <a class="go" href={listingUrl(b.id)}>Full guide →</a>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- AREAS -->
+  {
+    areas.length > 0 && (
+      <section id="areas">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> Neighbourhoods</p>
+          <h2>Bournemouth, <em>area by area</em></h2>
+          <p class="section-intro">Beyond the seafront, each district has its own high street, character and reasons to visit.</p>
+          <div class="areas-grid">
+            {areas.map((a) => (
+              <a class="area" href={areaUrl(a.data.type, a.id)}>
+                <Photo src={a.data.heroImage?.src} alt={a.data.heroImage?.alt} label={a.data.title} />
+                <div class="area-body">
+                  <span class="kind">{a.data.type}</span>
+                  <h3>{a.data.title}</h3>
+                  <p>{a.data.tagline}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- WHAT'S ON -->
+  <section class="seasons answer" id="whats-on" style="background:var(--sand)">
+    <div class="wrap">
+      <p class="eyebrow"><span class="sun"></span> What's On</p>
+      <h2>A town that changes <em>with the seasons</em></h2>
+      <p class="section-intro">Bournemouth runs a full calendar of festivals, sport and live events. These are the headline moments of the year.</p>
+      {
+        upcoming.length > 0 && (
+          <div class="cards" style="margin-top:40px">
+            {upcoming.map((e) => (
+              <a class="lcard" href={eventUrl(e.id)}>
+                <Photo src={e.data.heroImage?.src} alt={e.data.heroImage?.alt} label={e.data.title} />
+                <div class="lcard-body">
+                  <span class="kind">{formatDateRange(e.data.startDate, e.data.endDate)}</span>
+                  <h3>{e.data.title}</h3>
+                  <p>{e.data.tagline}</p>
+                </div>
+              </a>
+            ))}
+          </div>
+        )
+      }
+      <p style="margin-top:28px"><a class="btn btn-dark" href="/whats-on">See the full what’s on calendar →</a></p>
+    </div>
+  </section>
+
+  <!-- FOOD & STAY -->
+  <section id="food-drink">
+    <div class="wrap">
+      <p class="eyebrow"><span class="sun"></span> Eat, Drink, Stay</p>
+      <h2>Where to eat and <em>where to sleep</em></h2>
+      <div class="plan-grid" id="stay">
+        <div class="plan-item"><h3>Restaurants & cafés</h3><p>From seafood on the seafront to independent kitchens in Westbourne, Boscombe and the Triangle. <a href="/food-and-drink" style="color:var(--sea)">Browse the food & drink guide →</a></p></div>
+        <div class="plan-item"><h3>Pubs, bars & afternoon tea</h3><p>Traditional pubs, cocktail bars and classic afternoon teas in the town’s grand hotels, plus the best beachside coffee stops.</p></div>
+        <div class="plan-item"><h3>Accommodation</h3><p>Seafront hotels, B&Bs, self-catering apartments, holiday parks and glamping. <a href="/accommodation" style="color:var(--sea)">Find your stay →</a></p></div>
+      </div>
+      <div class="hero-ctas" style="margin-top:32px">
+        <a class="btn btn-dark" href={BOOKING_URL} target="_blank" rel="sponsored noopener">Book your stay with Flexiestays →</a>
+        <a class="btn btn-ghost" style="border-color:var(--line);color:var(--ink)" href="/accommodation">Browse all stays</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section class="plan" id="plan">
+    <div class="wrap">
+      <p class="eyebrow"><span class="sun"></span> Plan Your Visit</p>
+      <h2>Getting here is <em>the easy part</em></h2>
+      <div class="plan-grid">
+        <div class="plan-item"><h3>By train</h3><p>Direct services from London Waterloo take around 2 hours. Bournemouth station is a 20-minute walk or short bus ride from the beach.</p></div>
+        <div class="plan-item"><h3>By car</h3><p>Roughly 2–2.5 hours from London via the M3, M27 and A338. Seafront and town-centre car parks fill early on summer weekends  arrive before 10am.</p></div>
+        <div class="plan-item"><h3>By air & coach</h3><p>Bournemouth Airport connects the town with European destinations, and National Express coaches run direct from London and major UK cities.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <Faq faqs={homeFaqs} heading="Bournemouth, answered" />
+
+  <!-- LIVE WEATHER + BEACH PICKER -->
+  <script is:inline define:vars={{ beaches: beaches.map((b) => ({ id: b.id, title: b.data.title, tagline: b.data.tagline, area: b.data.area })) }}>
+    // Live weather (Open-Meteo, no API key)
+    const WX = {0:'Clear sky',1:'Mainly clear',2:'Partly cloudy',3:'Overcast',45:'Fog',48:'Fog',51:'Light drizzle',53:'Drizzle',55:'Drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Snow',80:'Showers',81:'Showers',82:'Heavy showers',95:'Thunderstorm'};
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=50.72&longitude=-1.88&current=temperature_2m,weather_code&timezone=Europe/London')
+      .then((r) => r.json())
+      .then((d) => {
+        const t = Math.round(d.current.temperature_2m);
+        document.getElementById('wx-temp').textContent = t + '°C';
+        document.getElementById('wx-desc').textContent = (WX[d.current.weather_code] || 'Live') + ' in Bournemouth right now';
+      })
+      .catch(() => { document.getElementById('wx-desc').textContent = 'Live weather in Bournemouth'; });
+    fetch('https://marine-api.open-meteo.com/v1/marine?latitude=50.71&longitude=-1.87&current=sea_surface_temperature')
+      .then((r) => r.json())
+      .then((d) => { document.getElementById('wx-sea').textContent = Math.round(d.current.sea_surface_temperature) + '°C'; })
+      .catch(() => { document.getElementById('wx-sea').textContent = '~17°C'; });
+
+    // Beach picker  recommend a beach and link to its page
+    const pref = {
+      quiet: ['alum-chine-beach', 'southbourne-beach'],
+      family: ['bournemouth-beach', 'durley-chine-beach'],
+      facilities: ['durley-chine-beach', 'bournemouth-beach'],
+      surf: ['boscombe-beach'],
+      dogs: ['southbourne-beach', 'alum-chine-beach'],
+    };
+    function findBeach(ids) { for (const id of ids) { const b = beaches.find((x) => x.id === id); if (b) return b; } return beaches[0]; }
+    document.querySelectorAll('#picker .chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#picker .chip').forEach((b) => b.classList.remove('on'));
+        btn.classList.add('on');
+        const b = findBeach(pref[btn.dataset.pick] || []);
+        if (b) document.getElementById('pick-result').innerHTML = '<b>' + b.title + '</b>  ' + b.tagline + ' <a href="/listing/' + b.id + '" style="color:#E3B562;font-weight:600">Full guide →</a>';
+      });
+    });
+  </script>
+</BaseLayout>

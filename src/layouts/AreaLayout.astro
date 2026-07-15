@@ -1,0 +1,83 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Photo from '../components/Photo.astro';
+import Faq from '../components/Faq.astro';
+import ListingCard from '../components/ListingCard.astro';
+import { areaUrl, SITE, absoluteUrl } from '../lib/site';
+import { graph, breadcrumbs as bcSchema, faqPage } from '../lib/schema';
+import { getEntries } from 'astro:content';
+
+const { entry, breadcrumbs } = Astro.props;
+const d = entry.data;
+const url = areaUrl(d.type, entry.id);
+
+const relatedListings = (d.relatedListings?.length ? await getEntries(d.relatedListings) : []).filter(Boolean);
+
+const seoTitle = d.seo?.title ?? `${d.title}  Bournemouth Area Guide`;
+const seoDesc = d.seo?.description ?? d.tagline;
+
+const placeNode = {
+  '@type': 'Place',
+  '@id': absoluteUrl(url) + '#place',
+  name: d.title,
+  description: d.tagline,
+  url: absoluteUrl(url),
+  ...(d.heroImage ? { image: absoluteUrl(d.heroImage.src) } : {}),
+  ...(d.geo ? { geo: { '@type': 'GeoCoordinates', latitude: d.geo.lat, longitude: d.geo.lng } } : {}),
+  address: { '@type': 'PostalAddress', addressRegion: 'Dorset', addressCountry: 'GB' },
+};
+
+const jsonLd = graph(placeNode, bcSchema(breadcrumbs), faqPage(d.faqs));
+---
+<BaseLayout
+  title={seoTitle}
+  description={seoDesc}
+  path={url}
+  ogImage={d.seo?.ogImage ?? d.heroImage?.src ?? SITE.ogImage}
+  ogType="article"
+  jsonLd={jsonLd}
+>
+  <section class="page-hero tall" style={d.heroImage ? `background-image:url('${d.heroImage.src}')` : ''}>
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> Area Guide · {d.type}</p>
+      <h1>{d.title}</h1>
+      <p class="tagline">{d.tagline}</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="wrap">
+      <article class="prose" style="max-width:var(--reading)">
+        <slot />
+      </article>
+
+      {
+        d.gallery?.length > 0 && (
+          <div class="gallery" style="margin-top:40px;grid-template-columns:repeat(3,1fr)">
+            {d.gallery.map((g: { src: string; alt: string }) => <Photo src={g.src} alt={g.alt} />)}
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  {
+    relatedListings.length > 0 && (
+      <section class="related">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> In & around {d.title}</p>
+          <h2>Things to do in {d.title}</h2>
+          <div class="cards">
+            {relatedListings.map((r: any) => <ListingCard id={r.id} data={r.data} />)}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <Faq faqs={d.faqs} heading={`${d.title}  your questions answered`} />
+</BaseLayout>

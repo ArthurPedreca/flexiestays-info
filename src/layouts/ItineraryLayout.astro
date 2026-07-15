@@ -1,0 +1,63 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Faq from '../components/Faq.astro';
+import ListingCard from '../components/ListingCard.astro';
+import { itineraryUrl, SITE } from '../lib/site';
+import { graph, breadcrumbs as bcSchema, faqPage } from '../lib/schema';
+import { getEntries } from 'astro:content';
+
+const { entry, breadcrumbs } = Astro.props;
+const d = entry.data;
+const url = itineraryUrl(entry.id);
+
+const relatedListings = (d.relatedListings?.length ? await getEntries(d.relatedListings) : []).filter(Boolean);
+
+const seoTitle = d.seo?.title ?? `${d.title}  Bournemouth Itinerary`;
+const seoDesc = d.seo?.description ?? d.tagline;
+
+const jsonLd = graph(bcSchema(breadcrumbs), faqPage(d.faqs));
+---
+<BaseLayout
+  title={seoTitle}
+  description={seoDesc}
+  path={url}
+  ogImage={d.seo?.ogImage ?? d.heroImage?.src ?? SITE.ogImage}
+  ogType="article"
+  jsonLd={jsonLd}
+>
+  <section class="page-hero tall" style={d.heroImage ? `background-image:url('${d.heroImage.src}')` : ''}>
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> Itinerary · {d.persona}{d.duration ? ` · ${d.duration}` : ''}</p>
+      <h1>{d.title}</h1>
+      <p class="tagline">{d.tagline}</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="wrap">
+      <article class="prose" style="max-width:var(--reading)">
+        <slot />
+      </article>
+    </div>
+  </section>
+
+  {
+    relatedListings.length > 0 && (
+      <section class="related">
+        <div class="wrap">
+          <p class="eyebrow"><span class="sun" /> On this itinerary</p>
+          <h2>Places featured</h2>
+          <div class="cards">
+            {relatedListings.map((r: any) => <ListingCard id={r.id} data={r.data} />)}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <Faq faqs={d.faqs} />
+</BaseLayout>

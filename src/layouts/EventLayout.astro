@@ -1,0 +1,120 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumbs from '../components/Breadcrumbs.astro';
+import Faq from '../components/Faq.astro';
+import MiniMap from '../components/MiniMap.astro';
+import { EVENT_CATEGORY_LABELS, AREA_LABELS, eventUrl, listingUrl, SITE } from '../lib/site';
+import { formatDateRange } from '../lib/format';
+import { graph, event as eventSchema, breadcrumbs as bcSchema, faqPage } from '../lib/schema';
+import { getEntry } from 'astro:content';
+
+const { entry, breadcrumbs } = Astro.props;
+const d = entry.data;
+const url = eventUrl(entry.id);
+
+// Resolve the venue back into the listings DB (relational model).
+const venue = d.venue ? await getEntry(d.venue) : null;
+const locationName = d.locationName ?? venue?.data.title ?? 'Bournemouth';
+const geo = d.geo ?? venue?.data.geo;
+
+const seoTitle = d.seo?.title ?? `${d.title}  What's On in Bournemouth`;
+const seoDesc = d.seo?.description ?? d.tagline;
+
+const jsonLd = graph(
+  eventSchema({ ...d, locationName, geo }, url),
+  bcSchema(breadcrumbs),
+  faqPage(d.faqs),
+);
+---
+<BaseLayout
+  title={seoTitle}
+  description={seoDesc}
+  path={url}
+  ogImage={d.seo?.ogImage ?? d.heroImage?.src ?? SITE.ogImage}
+  ogType="article"
+  noindex={d.seo?.noindex}
+  jsonLd={jsonLd}
+  leaflet={!!geo}
+>
+  <section class="page-hero" style={d.heroImage ? `background-image:url('${d.heroImage.src}')` : ''}>
+    <div class="veil"></div>
+    <div class="hero-inner wrap">
+      <p class="eyebrow kicker"><span class="sun"></span> {EVENT_CATEGORY_LABELS[d.category]} · What's On</p>
+      <h1>{d.title}</h1>
+      <p class="tagline">{d.tagline}</p>
+    </div>
+  </section>
+
+  <Breadcrumbs items={breadcrumbs} />
+
+  <section class="tight">
+    <div class="wrap">
+      <div class="event-meta">
+        <div class="cell">
+          <div class="label">Dates</div>
+          <div class="value">{formatDateRange(d.startDate, d.endDate)}</div>
+        </div>
+        {
+          (d.startTime || d.endTime) && (
+            <div class="cell">
+              <div class="label">Time</div>
+              <div class="value">{[d.startTime, d.endTime].filter(Boolean).join(' – ')}</div>
+            </div>
+          )
+        }
+        <div class="cell">
+          <div class="label">Location</div>
+          <div class="value">
+            {venue ? <a href={listingUrl(venue.id)} style="color:var(--sea)">{locationName}</a> : locationName}
+            {d.area && ` · ${AREA_LABELS[d.area]}`}
+          </div>
+        </div>
+        {
+          d.price && (
+            <div class="cell">
+              <div class="label">Price</div>
+              <div class="value">{d.price}</div>
+            </div>
+          )
+        }
+      </div>
+
+      <div class="listing-layout" style="margin-top:44px">
+        <article class="prose">
+          <slot />
+
+          {
+            d.recurringDates?.length > 0 && (
+              <div class="event-dates">
+                <h3>Dates & times</h3>
+                <ul>
+                  {d.recurringDates.map((x: string) => <li>{x}</li>)}
+                </ul>
+              </div>
+            )
+          }
+        </article>
+
+        <aside>
+          <div class="info-card">
+            <div class="info-head">Event details</div>
+            <div class="info-row"><span class="label">When</span><span class="val">{formatDateRange(d.startDate, d.endDate)}</span></div>
+            <div class="info-row"><span class="label">Where</span><span class="val">{locationName}</span></div>
+            {d.organizer && <div class="info-row"><span class="label">Organiser</span><span class="val">{d.organizer}</span></div>}
+            {d.price && <div class="info-row"><span class="label">Price</span><span class="val">{d.price}</span></div>}
+            {
+              d.ticketUrl && (
+                <div class="info-cta">
+                  <a class="btn btn-gold" href={d.ticketUrl} rel="nofollow noopener" target="_blank">Tickets / Info ↗</a>
+                </div>
+              )
+            }
+          </div>
+          {geo && <MiniMap lat={geo.lat} lng={geo.lng} name={locationName} type="attraction" />}
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <Faq faqs={d.faqs} heading={`${d.title}  good to know`} />
+</BaseLayout>

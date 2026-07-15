@@ -1,0 +1,27 @@
+---
+// Renders an FAQ accordion. The FAQPage JSON-LD is emitted separately by the
+// layout (via lib/schema.ts) so search engines get structured Q&A.
+interface Props {
+  faqs: { question: string; answer: string }[];
+  heading?: string;
+}
+const { faqs, heading = 'Frequently asked questions' } = Astro.props;
+---
+{
+  faqs.length > 0 && (
+    <section class="answer" style="background:var(--paper)">
+      <div class="wrap">
+        <p class="eyebrow"><span class="sun" /> Common Questions</p>
+        <h2>{heading}</h2>
+        <div class="faq-list">
+          {faqs.map((f) => (
+            <details>
+              <summary>{f.question}</summary>
+              <p>{f.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

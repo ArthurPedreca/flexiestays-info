@@ -1,0 +1,23 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { NAV } from '../lib/site';
+---
+<BaseLayout
+  title="Page not found  The Bournemouth Guide"
+  description="The page you were looking for has moved or no longer exists."
+  path="/404"
+  noindex={true}
+  solidHeader={true}
+>
+  <section class="doc" style="min-height:52vh;display:flex;align-items:center">
+    <div class="wrap" style="text-align:center">
+      <p class="eyebrow" style="justify-content:center"><span class="sun"></span> Lost your way?</p>
+      <h2 style="max-width:none;margin:0 auto">This page has drifted out to sea.</h2>
+      <p class="section-intro" style="margin:16px auto 0">The page you were looking for has moved or no longer exists. Try one of these instead:</p>
+      <div class="hero-ctas" style="justify-content:center;margin-top:28px">
+        <a class="btn btn-dark" href="/">Back to the guide</a>
+        {NAV.slice(0, 4).map((n) => <a class="btn btn-ghost" style="border-color:var(--line);color:var(--ink)" href={n.href}>{n.label}</a>)}
+      </div>
+    </div>
+  </section>
+</BaseLayout>

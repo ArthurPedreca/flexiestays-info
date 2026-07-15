@@ -1,0 +1,21 @@
+{
+  "name": "the-bournemouth-guide",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "The Bournemouth Guide  an SEO-first, static, content-driven guide to Bournemouth, Dorset. Built with Astro so pages can be generated from Markdown by automation.",
+  "scripts": {
+    "dev": "astro dev",
+    "start": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "new:listing": "node scripts/new-content.mjs listing",
+    "new:blog": "node scripts/new-content.mjs blog",
+    "new:event": "node scripts/new-content.mjs event"
+  },
+  "dependencies": {
+    "astro": "^5.13.5",
+    "@astrojs/sitemap": "^3.5.1",
+    "@astrojs/rss": "^4.0.11"
+  }
+}
