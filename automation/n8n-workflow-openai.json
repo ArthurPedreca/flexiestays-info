@@ -3,6 +3,22 @@
   "nodes": [
     {
       "parameters": {
+        "content": "## 📋 Setup — conectar credenciais\n\n**1) Credencial \"GitHub API\"** (crie em Credentials → GitHub API → cole um Fine-grained PAT com *Contents: Read and write* no seu repo)\nAnexe nos nodes:  ▸ **List existing posts**   ▸ **Commit to GitHub**\n\n**2) Credencial \"OpenAI\"** (Credentials → OpenAI → cole a API key)\nAnexe no node:  ▸ **Generate with OpenAI**\n\n**3) Node \"Config\":** ajuste owner / repo / branch (os nodes do GitHub leem daqui).\n\nDepois: **Execute Workflow** para testar → **Activate** para rodar todo dia.",
+        "height": 260,
+        "width": 1360,
+        "color": 4
+      },
+      "id": "node-sticky-setup",
+      "name": "Setup",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -340,
+        -20
+      ]
+    },
+    {
+      "parameters": {
         "rule": {
           "interval": [
             {
