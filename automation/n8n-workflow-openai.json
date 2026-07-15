@@ -1,0 +1,232 @@
+{
+  "name": "The Bournemouth Guide — daily SEO content (OpenAI)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "id": "node-schedule",
+      "name": "Every day 09:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// EDIT THESE after import:\nreturn [{ json: {\n  owner: 'YOUR_GITHUB_USERNAME',   // e.g. 'arthur-skoobie'\n  repo:  'bournemouth-guide',      // the GitHub repo name\n  branch: 'main'                   // branch Vercel builds from\n} }];"
+      },
+      "id": "node-config",
+      "name": "Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.github.com/repos/{{ $json.owner }}/{{ $json.repo }}/contents/src/content/blog?ref={{ $json.branch }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-bournemouth-guide"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-list",
+      "name": "List existing posts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        120,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "var files = [];\nvar first = ($input.first() && $input.first().json) || null;\nif (Array.isArray(first)) { files = first; }\nelse { files = $input.all().map(function (i) { return i.json; }); }\nvar existing = {};\nfiles.forEach(function (f) {\n  var name = (f && (f.name || f.path)) ? String(f.name || f.path).split('/').pop() : '';\n  if (name) existing[name.replace(/\\.md$/, '')] = true;\n});\n\n// --- CONTENT PLAN: add rows freely. Order = publish priority. ---\nvar TOPICS = [\n  { slug: 'best-time-to-visit-bournemouth', title: 'The Best Time to Visit Bournemouth', keyword: 'best time to visit Bournemouth', category: 'seasonal' },\n  { slug: 'bournemouth-on-a-budget', title: 'Bournemouth on a Budget: Free and Cheap Things to Do', keyword: 'cheap things to do in Bournemouth', category: 'things-to-do' },\n  { slug: 'dog-friendly-bournemouth', title: 'Dog-Friendly Bournemouth: Beaches, Walks and Places to Stay', keyword: 'dog friendly Bournemouth', category: 'guides' },\n  { slug: 'things-to-do-in-bournemouth-when-it-rains', title: 'What to Do in Bournemouth When It Rains', keyword: 'things to do in Bournemouth when it rains', category: 'things-to-do' },\n  { slug: 'how-to-get-to-bournemouth', title: 'How to Get to Bournemouth: Train, Car and Airport Guide', keyword: 'how to get to Bournemouth', category: 'guides' },\n  { slug: 'bournemouth-nightlife', title: 'Bournemouth Nightlife: Bars, Live Music and Late-Night Eats', keyword: 'Bournemouth nightlife', category: 'food-and-drink' },\n  { slug: 'best-fish-and-chips-in-bournemouth', title: 'Where to Find the Best Fish and Chips in Bournemouth', keyword: 'best fish and chips Bournemouth', category: 'food-and-drink' },\n  { slug: 'coastal-walks-near-bournemouth', title: 'The Best Coastal Walks Near Bournemouth', keyword: 'coastal walks near Bournemouth', category: 'walking' },\n  { slug: 'romantic-things-to-do-in-bournemouth', title: 'A Romantic Weekend in Bournemouth: The Couples Guide', keyword: 'romantic things to do in Bournemouth', category: 'guides' },\n  { slug: 'family-days-out-in-bournemouth', title: 'The Best Family Days Out in Bournemouth', keyword: 'family days out Bournemouth', category: 'family' }\n];\n\nvar next = null;\nfor (var i = 0; i < TOPICS.length; i++) { if (!existing[TOPICS[i].slug]) { next = TOPICS[i]; break; } }\nif (!next) { return []; }  // nothing new to publish today\n\nvar SYSTEM = \"You are the senior local-SEO editor for The Bournemouth Guide, an independent visitor guide to Bournemouth, Dorset (UK).\\nYou write original, genuinely useful, E-E-A-T-strong articles that rank on Google and get cited by AI answer engines (ChatGPT, Perplexity, Google AI Overviews).\\n\\nHARD RULES:\\n- British English. Warm, knowledgeable, first-hand local tone. Never generic AI filler, never 'In conclusion'.\\n- 100% ORIGINAL. Never copy any other website. Use only well-known, stable, evergreen facts about Bournemouth.\\n- Target the given keyword naturally: in the title, the first sentence, and 2-3 subheadings. Never keyword-stuff.\\n- Open with a direct, self-contained answer to the query (2-4 sentences) so it can win featured snippets and AI answers.\\n- Then 4-7 sections, each a descriptive '## ' subheading. NO H1 ('# ') anywhere — the title is stored separately.\\n- NEVER invent specific prices, phone numbers, opening hours, addresses, or businesses that may not exist. Stay general and evergreen.\\n\\nINTERNAL LINKS (Markdown): use 3-6 links, only to these existing pages, with natural anchor text:\\n  /things-to-do, /things-to-do/beaches, /things-to-do/attractions, /food-and-drink, /food-and-drink/restaurants,\\n  /accommodation, /whats-on, /explore, /visitor-information, /ideas-and-inspiration\\n\\nACCOMMODATION FUNNEL (required, but natural):\\n- Include ONE 'where to stay' moment that links to /accommodation.\\n- Include EXACTLY ONE contextual mention of Flexiestays linking to https://flexiestays.com — vary the anchor text every article\\n  (e.g. 'serviced apartments near the beach', 'Flexiestays aparthotels', 'a flexible short- or long-stay base'), and only where it\\n  genuinely helps the reader (serviced apartments / aparthotels close to Bournemouth beach). Never link Flexiestays more than once.\\n\\nFAQs: 3-4 real-search-intent Q&As, each answer 1-3 sentences.\\n\\nReturn ONLY the requested structured JSON object. body_markdown is the article body in Markdown (no frontmatter, no H1).\";\nvar SCHEMA = {\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"title\":{\"type\":\"string\"},\"description\":{\"type\":\"string\"},\"tags\":{\"type\":\"array\",\"items\":{\"type\":\"string\"}},\"faqs\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"additionalProperties\":false,\"properties\":{\"question\":{\"type\":\"string\"},\"answer\":{\"type\":\"string\"}},\"required\":[\"question\",\"answer\"]}},\"body_markdown\":{\"type\":\"string\"}},\"required\":[\"title\",\"description\",\"tags\",\"faqs\",\"body_markdown\"]};\n\nvar user = 'Write the article now.\\n'\n  + 'Target keyword: \"' + next.keyword + '\".\\n'\n  + 'Working title: \"' + next.title + '\" (you may refine the wording for SEO but keep the same topic and search intent).';\n\nvar requestBody = {\n  model: 'gpt-4o',            // change to gpt-4.1 / a newer model if you like (reasoning models: use max_completion_tokens)\n  max_tokens: 8000,\n  temperature: 0.7,\n  messages: [\n    { role: 'system', content: SYSTEM },\n    { role: 'user', content: user }\n  ],\n  response_format: { type: 'json_schema', json_schema: { name: 'bournemouth_article', strict: true, schema: SCHEMA } }\n};\n\nreturn [{ json: { slug: next.slug, title: next.title, keyword: next.keyword, category: next.category, requestBody: requestBody } }];"
+      },
+      "id": "node-pick",
+      "name": "Pick next topic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "node-openai",
+      "name": "Generate with OpenAI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "var topic = $('Pick next topic').first().json;\nvar resp = $json;\n\n// 1) Extract the JSON string from the OpenAI response.\nvar content = resp && resp.choices && resp.choices[0] && resp.choices[0].message && resp.choices[0].message.content;\nif (!content) { throw new Error('No content in OpenAI response: ' + JSON.stringify(resp).slice(0, 400)); }\nvar data;\ntry { data = JSON.parse(content); } catch (e) { throw new Error('OpenAI did not return valid JSON: ' + String(content).slice(0, 300)); }\n\n// 2) Validate + normalise (a bad file would break the whole Astro build).\nvar VALID_CATEGORIES = ['things-to-do','food-and-drink','beaches','events','seasonal','family','wellness','walking','guides'];\nvar category = VALID_CATEGORIES.indexOf(topic.category) !== -1 ? topic.category : 'guides';\n\nvar title = String(data.title || topic.title).trim();\nvar description = String(data.description || '').replace(/\\s+/g, ' ').trim();\nif (description.length > 200) { description = description.slice(0, 197).replace(/\\s+\\S*$/, '') + '...'; }\nif (!description) { throw new Error('Empty description'); }\n\nvar tags = Array.isArray(data.tags) ? data.tags.map(function (t) { return String(t).trim(); }).filter(Boolean).slice(0, 8) : [];\n\nvar faqs = Array.isArray(data.faqs) ? data.faqs.filter(function (f) { return f && f.question && f.answer; }).map(function (f) {\n  return { question: String(f.question).replace(/\\s+/g, ' ').trim(), answer: String(f.answer).replace(/\\s+/g, ' ').trim() };\n}) : [];\n\nvar body = String(data.body_markdown || '').trim();\nif (body.length < 400) { throw new Error('Body too short (' + body.length + ' chars) — refusing to publish'); }\nbody = body.replace(/^# (?!#)/gm, '## ');\n\nvar HERO = {\n  'beaches':       { src: '/images/wiki/bournemouth-beach.jpg', alt: 'Bournemouth beach and seafront' },\n  'things-to-do':  { src: '/images/wiki/lower-gardens.jpg', alt: 'Bournemouth Lower Gardens' },\n  'food-and-drink':{ src: '/images/wiki/westbourne.jpg', alt: 'Independent cafes and dining in Bournemouth' },\n  'events':        { src: '/images/wiki/air-festival.jpg', alt: 'An event on the Bournemouth seafront' },\n  'seasonal':      { src: '/images/bournemouth-town-seafront-aerial.jpg', alt: 'Bournemouth seafront from above' },\n  'family':        { src: '/images/wiki/oceanarium.jpg', alt: 'A family attraction in Bournemouth' },\n  'wellness':      { src: '/images/wiki/southbourne-beach.jpg', alt: 'Quiet clifftop beach at Southbourne' },\n  'walking':       { src: '/images/wiki/bournemouth-pier.jpg', alt: 'Bournemouth pier and promenade' },\n  'guides':        { src: '/images/bournemouth-pier-and-beach.jpg', alt: 'Bournemouth pier and beach' }\n};\nvar hero = HERO[category] || { src: '/images/bournemouth-town-seafront-aerial.jpg', alt: 'Bournemouth seafront from above' };\n\nvar q = function (s) { return JSON.stringify(String(s)); };\nvar pubDate = new Date().toISOString().slice(0, 10);\nvar lines = [];\nlines.push('---');\nlines.push('title: ' + q(title));\nlines.push('description: ' + q(description));\nlines.push('category: ' + q(category));\nlines.push('heroImage:');\nlines.push('  src: ' + q(hero.src));\nlines.push('  alt: ' + q(hero.alt));\nlines.push('pubDate: ' + pubDate);\nlines.push('author: \"The Bournemouth Guide\"');\nlines.push('tags: [' + tags.map(q).join(', ') + ']');\nif (faqs.length) {\n  lines.push('faqs:');\n  faqs.forEach(function (f) { lines.push('  - question: ' + q(f.question)); lines.push('    answer: ' + q(f.answer)); });\n}\nlines.push('featured: false');\nlines.push('draft: false');\nlines.push('---');\nlines.push('');\nvar fileContent = lines.join('\\n') + body + '\\n';\n\nreturn [{ json: {\n  filePath: 'src/content/blog/' + topic.slug + '.md',\n  commitMessage: 'content: add \"' + title + '\" (automated)',\n  contentBase64: Buffer.from(fileContent, 'utf8').toString('base64'),\n  branch: $('Config').first().json.branch,\n  owner: $('Config').first().json.owner,\n  repo: $('Config').first().json.repo,\n  slug: topic.slug\n} }];"
+      },
+      "id": "node-build",
+      "name": "Build post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://api.github.com/repos/{{ $json.owner }}/{{ $json.repo }}/contents/{{ $json.filePath }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/vnd.github+json"
+            },
+            {
+              "name": "X-GitHub-Api-Version",
+              "value": "2022-11-28"
+            },
+            {
+              "name": "User-Agent",
+              "value": "n8n-bournemouth-guide"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ message: $json.commitMessage, content: $json.contentBase64, branch: $json.branch }) }}",
+        "options": {}
+      },
+      "id": "node-commit",
+      "name": "Commit to GitHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1000,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Every day 09:00": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "List existing posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List existing posts": {
+      "main": [
+        [
+          {
+            "node": "Pick next topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick next topic": {
+      "main": [
+        [
+          {
+            "node": "Generate with OpenAI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate with OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Build post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build post": {
+      "main": [
+        [
+          {
+            "node": "Commit to GitHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
